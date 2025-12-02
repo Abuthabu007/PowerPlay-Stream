@@ -1,0 +1,17 @@
+runtime: nodejs18
+
+env: standard
+
+# Cloud Run configuration
+service: video-processor
+
+# Environment variables
+env_variables:
+  NODE_ENV: "production"
+  PORT: "8080"
+  USE_MYSQL: "true"
+  DB_DIALECT: "postgres"
+
+# Cloud SQL connections
+cloud_sql_instances:
+  - "komo-infra-479911:us-central1:video-metadata"
