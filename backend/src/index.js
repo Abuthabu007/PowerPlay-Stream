@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require('express-cors');
+const cors = require('cors');
 const dotenv = require('dotenv');
 const sequelize = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
