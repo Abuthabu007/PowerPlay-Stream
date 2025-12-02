@@ -12,6 +12,21 @@ function App() {
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
+        // In development with IAP disabled, auto-authenticate
+        const response = await fetch('/health');
+        if (response.ok) {
+          const data = await response.json();
+          // If we can reach the health endpoint, we're in dev mode with IAP disabled
+          setUser({
+            id: 'dev-user',
+            name: 'Development User',
+            email: 'dev@example.com',
+            iapId: 'dev-user'
+          });
+          setUserRole('admin');
+        }
+      } catch (err) {
+        // Check if user has stored token
         const token = localStorage.getItem('iapToken');
         if (token) {
           // Parse JWT and extract user info
@@ -24,8 +39,6 @@ function App() {
           });
           setUserRole(userData.role || 'user');
         }
-      } catch (err) {
-        console.error('Auth check failed:', err);
       } finally {
         setLoading(false);
       }
