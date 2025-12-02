@@ -13,7 +13,7 @@ COPY src ./src
 
 # Set environment
 ENV NODE_ENV=production
-EXPOSE 5000
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

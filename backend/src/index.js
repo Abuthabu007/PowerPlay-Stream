@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const sequelize = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const videoRoutes = require('./routes/videoRoutes');
@@ -9,20 +10,29 @@ const searchRoutes = require('./routes/searchRoutes');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-// Routes
+// Serve static frontend files
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
+
+// API Routes
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Serve index.html for all non-API routes (SPA support)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Error handler
