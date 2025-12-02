@@ -6,7 +6,6 @@ const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (query.length < 1) {
@@ -17,14 +16,11 @@ const SearchBar = ({ onSearch }) => {
 
     const fetchSuggestions = async () => {
       try {
-        setLoading(true);
         const response = await searchAPI.getSuggestions(query);
         setSuggestions(response.data.data || []);
         setShowSuggestions(true);
       } catch (error) {
         console.error('Search suggestions error:', error);
-      } finally {
-        setLoading(false);
       }
     };
 

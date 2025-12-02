@@ -2,6 +2,27 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import '../styles/UploadDialog.css';
 
+// Separate component for caption dropzones to avoid hook calls in loops
+const CaptionDropzone = ({ language, label, onDrop, captionAdded }) => {
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: (files) => onDrop(files, language)
+  });
+
+  return (
+    <div className="caption-item">
+      <label>{label}</label>
+      <div {...getRootProps()} className="dropzone-small">
+        <input {...getInputProps()} />
+        {captionAdded ? (
+          <p className="file-selected">✓ Caption added</p>
+        ) : (
+          <p>Add {label} caption</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const UploadDialog = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -208,22 +229,13 @@ const UploadDialog = ({ onClose, onSuccess }) => {
             <label>Captions (Optional)</label>
             <div className="captions-container">
               {languages.map(lang => (
-                <div key={lang.code} className="caption-item">
-                  <label>{lang.label}</label>
-                  <div
-                    {...useDropzone({
-                      onDrop: (files) => onCaptionDrop(files, lang.code)
-                    }).getRootProps()}
-                    className="dropzone-small"
-                  >
-                    <input {...useDropzone({ onDrop: (files) => onCaptionDrop(files, lang.code) }).getInputProps()} />
-                    {formData.captions.find(c => c.language === lang.code) ? (
-                      <p className="file-selected">✓ Caption added</p>
-                    ) : (
-                      <p>Add {lang.label} caption</p>
-                    )}
-                  </div>
-                </div>
+                <CaptionDropzone
+                  key={lang.code}
+                  language={lang.code}
+                  label={lang.label}
+                  onDrop={onCaptionDrop}
+                  captionAdded={!!formData.captions.find(c => c.language === lang.code)}
+                />
               ))}
             </div>
           </div>

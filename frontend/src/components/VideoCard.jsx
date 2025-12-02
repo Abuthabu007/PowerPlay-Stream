@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import '../styles/VideoCard.css';
 
 const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUserId, userRole }) => {

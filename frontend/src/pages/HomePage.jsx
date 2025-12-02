@@ -16,9 +16,10 @@ const HomePage = ({ user, userRole }) => {
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'my-videos', 'downloaded'
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load videos on mount
+  // Load videos on mount and when tab changes
   useEffect(() => {
     loadVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const loadVideos = async () => {

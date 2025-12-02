@@ -5,9 +5,10 @@ const LoginPage = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if user is already authenticated
   useEffect(() => {
-    // Check if user is already authenticated
     checkAuthentication();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthentication = async () => {
