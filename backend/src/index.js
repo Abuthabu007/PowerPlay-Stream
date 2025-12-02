@@ -21,7 +21,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
 // Serve static frontend files
-const publicPath = path.join(__dirname, '../public');
+const publicPath = path.join(__dirname, '../../frontend/build');
 app.use(express.static(publicPath));
 
 // API Routes
