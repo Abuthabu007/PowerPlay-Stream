@@ -4,8 +4,23 @@ require('dotenv').config();
 /**
  * IAP Authentication Middleware
  * Verifies Google Identity-Aware Proxy JWT token
+ * 
+ * Set DISABLE_IAP_VALIDATION=true in environment to skip validation (dev/local only)
  */
 const iapAuth = (req, res, next) => {
+  // Allow bypassing IAP validation for local development
+  if (process.env.DISABLE_IAP_VALIDATION === 'true') {
+    console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
+    // Mock a user for testing
+    req.user = {
+      id: 'dev-user',
+      email: 'dev@example.com',
+      name: 'Development User',
+      iapId: 'dev-user'
+    };
+    return next();
+  }
+
   try {
     // Get IAP JWT token from Authorization header
     const iapJwt = req.headers.authorization?.split('Bearer ')[1];
