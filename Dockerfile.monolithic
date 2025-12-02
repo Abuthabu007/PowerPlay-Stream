@@ -1,0 +1,50 @@
+# Multi-stage build for monolithic deployment
+# Stage 1: Build frontend
+FROM node:18-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+RUN npm install
+
+COPY frontend . .
+RUN npm run build
+
+# Stage 2: Build backend
+FROM node:18-alpine AS backend-builder
+
+WORKDIR /app/backend
+
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+COPY backend/src ./src
+
+# Stage 3: Production - Combine both
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy backend
+COPY --from=backend-builder /app/backend ./backend
+
+# Copy frontend build (static files)
+COPY --from=frontend-builder /app/frontend/build ./frontend/build
+
+# Set working directory to backend
+WORKDIR /app/backend
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+CMD ["node", "src/index.js"]
