@@ -1,0 +1,22 @@
+steps:
+  # Step 1: Build the frontend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/komo-infra-479911/powerplay-frontend:latest'
+      - '-t'
+      - 'gcr.io/komo-infra-479911/powerplay-frontend:${SHORT_SHA}'
+      - './frontend'
+
+  # Step 2: Push frontend image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'gcr.io/komo-infra-479911/powerplay-frontend:latest'
+
+images:
+  - 'gcr.io/komo-infra-479911/powerplay-frontend:latest'
+  - 'gcr.io/komo-infra-479911/powerplay-frontend:${SHORT_SHA}'
+
+timeout: '1800s'
