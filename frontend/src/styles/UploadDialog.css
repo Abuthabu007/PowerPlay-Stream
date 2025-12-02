@@ -1,0 +1,191 @@
+/* Upload Dialog */
+.upload-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.upload-dialog {
+  background-color: var(--surface-color);
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.upload-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background-color: var(--surface-color);
+  z-index: 10;
+}
+
+.upload-dialog-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+}
+
+.upload-form {
+  padding: 20px;
+}
+
+.form-section {
+  margin-bottom: 20px;
+}
+
+.form-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-section input[type="text"],
+.form-section input[type="email"],
+.form-section textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.form-section input[type="text"]:focus,
+.form-section textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.form-section textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+.dropzone:hover {
+  border-color: var(--primary-color);
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.dropzone p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.file-selected {
+  color: var(--success-color);
+  font-weight: 500;
+}
+
+.dropzone-small {
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: rgba(99, 102, 241, 0.02);
+}
+
+.dropzone-small:hover {
+  border-color: var(--primary-color);
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+.dropzone-small p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.thumbnail-preview {
+  max-width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.thumbnail-preview img {
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.captions-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
+}
+
+.caption-item label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.form-section input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.form-actions button {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.form-actions .btn-secondary {
+  background-color: var(--surface-color);
+}
