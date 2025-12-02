@@ -64,11 +64,11 @@ gcloud run deploy $BACKEND_SERVICE `
   --region $REGION `
   --project $PROJECT_ID `
   --port 8080 `
-  --memory 1Gi `
-  --cpu 2 `
+  --memory 512Mi `
+  --cpu 1 `
   --timeout 300 `
-  --max-instances 100 `
-  --min-instances 1 `
+  --max-instances 10 `
+  --min-instances 0 `
   --allow-unauthenticated `
   --set-env-vars="NODE_ENV=production,CLOUD_SQL_HOST=34.136.51.9,CLOUD_SQL_PORT=5432,CLOUD_SQL_DATABASE=video_metadata,GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
 
@@ -93,11 +93,11 @@ gcloud run deploy $FRONTEND_SERVICE `
   --region $REGION `
   --project $PROJECT_ID `
   --port 3000 `
-  --memory 512Mi `
+  --memory 256Mi `
   --cpu 1 `
   --timeout 300 `
-  --max-instances 50 `
-  --min-instances 1 `
+  --max-instances 5 `
+  --min-instances 0 `
   --allow-unauthenticated `
   --set-env-vars="REACT_APP_API_URL=$BACKEND_URL"
 
