@@ -124,12 +124,9 @@ const UploadDialog = ({ onClose, onSuccess }) => {
         uploadFormData.append('thumbnail', thumbnail);
       }
 
-      // Submit form data (you'll need to implement the actual API call)
+      // Submit form data
       const response = await fetch('/api/videos/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('iapToken')}`
-        },
         body: uploadFormData
       });
 
