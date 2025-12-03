@@ -4,26 +4,32 @@ require('dotenv').config();
 // Initialize Google Cloud Storage
 let storage;
 let bucket;
+let storageAvailable = false;
 
 try {
-  storage = new Storage({
-    projectId: process.env.GCP_PROJECT_ID,
-    keyFilename: process.env.GCP_KEY_FILE
-  });
+  // Only initialize storage if we have GCP credentials
+  if (process.env.GCP_PROJECT_ID && process.env.GCP_KEY_FILE) {
+    storage = new Storage({
+      projectId: process.env.GCP_PROJECT_ID,
+      keyFilename: process.env.GCP_KEY_FILE
+    });
 
-  bucket = storage.bucket(process.env.GCS_BUCKET_NAME || 'powerplay-stream-bucket');
-} catch (error) {
-  // In development without GCP credentials, create mock storage
-  if (process.env.DISABLE_IAP_VALIDATION === 'true') {
-    console.warn('[WARNING] Google Cloud Storage not available in development mode. File uploads will be saved locally.');
+    bucket = storage.bucket(process.env.GCS_BUCKET_NAME || 'powerplay-stream-bucket');
+    storageAvailable = true;
+  } else {
+    console.warn('[WARNING] GCP credentials not configured. Using local file storage.');
     storage = null;
     bucket = null;
-  } else {
-    throw error;
   }
+} catch (error) {
+  console.warn('[WARNING] Google Cloud Storage initialization failed:', error.message);
+  console.warn('Falling back to local file storage.');
+  storage = null;
+  bucket = null;
 }
 
 module.exports = {
   storage,
-  bucket
+  bucket,
+  storageAvailable
 };
