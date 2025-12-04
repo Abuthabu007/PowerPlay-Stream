@@ -23,11 +23,6 @@ COPY backend/src ./src
 # Stage 3: Production - Combine both
 FROM node:18-alpine
 
-# Install Cloud SQL Proxy
-RUN apk add --no-cache curl && \
-    curl -o /cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 && \
-    chmod +x /cloud_sql_proxy
-
 WORKDIR /app
 
 # Copy backend
@@ -48,10 +43,10 @@ RUN mkdir -p /app/uploads
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+# Health check with increased startup time
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)}).on('error', () => process.exit(1))"
 
-# Start both Cloud SQL Proxy and Node app
-CMD ["/bin/sh", "-c", "(/cloud_sql_proxy -instances=$CLOUD_SQL_INSTANCE_CONNECTION_NAME=tcp:5432 &) && node src/index.js"]
+# Start Node app
+CMD ["node", "src/index.js"]
 
