@@ -13,6 +13,12 @@ class VideoController {
       const videoFile = req.files?.video?.[0];
       const thumbnailFile = req.files?.thumbnail?.[0];
 
+      console.log('[UPLOAD] Starting video upload');
+      console.log('[UPLOAD] User ID:', userId);
+      console.log('[UPLOAD] Title:', title);
+      console.log('[UPLOAD] Video file:', videoFile ? { name: videoFile.originalname, size: videoFile.size } : 'none');
+      console.log('[UPLOAD] Thumbnail file:', thumbnailFile ? { name: thumbnailFile.originalname, size: thumbnailFile.size } : 'none');
+
       if (!videoFile) {
         return res.status(400).json({
           success: false,
@@ -22,7 +28,10 @@ class VideoController {
 
       // Create video metadata
       const videoId = uuidv4();
-      const folderPath = await storageService.createVideoFolder(videoId, userId);
+      console.log('[UPLOAD] Generated video ID:', videoId);
+      
+      const folderPath = await storageService.createVideoFolder(videoId, userId, title);
+      console.log('[UPLOAD] Created folder path:', folderPath);
 
       // Upload video file
       const videoUpload = await storageService.uploadVideo(
@@ -31,6 +40,7 @@ class VideoController {
         videoFile.path,
         videoFile.originalname
       );
+      console.log('[UPLOAD] Video uploaded:', videoUpload);
 
       // Upload thumbnail if provided
       let thumbnailUrl = null;
@@ -41,6 +51,7 @@ class VideoController {
           thumbnailFile.path
         );
         thumbnailUrl = thumbnailUpload.publicUrl;
+        console.log('[UPLOAD] Thumbnail uploaded:', thumbnailUpload);
       }
 
       // Generate embedded link
@@ -62,13 +73,15 @@ class VideoController {
         transcodingStatus: 'pending'
       });
 
+      console.log('[UPLOAD] Video record created in DB:', video.id);
+
       res.status(201).json({
         success: true,
         message: 'Video uploaded successfully',
         data: video
       });
     } catch (error) {
-      console.error('Upload video error:', error);
+      console.error('[UPLOAD] Upload video error:', error);
       res.status(500).json({
         success: false,
         message: error.message

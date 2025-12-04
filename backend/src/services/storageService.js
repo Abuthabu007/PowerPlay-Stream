@@ -17,14 +17,21 @@ class StorageService {
   }
 
   /**
-   * Create a unique folder for video upload
+   * Create a unique folder for video upload with title
    */
-  async createVideoFolder(videoId, userId) {
-    const folderPath = `videos/${userId}/${videoId}`;
+  async createVideoFolder(videoId, userId, videoTitle = '') {
+    // Sanitize title for use in path
+    const sanitizedTitle = videoTitle
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .substring(0, 50) // Limit to 50 chars
+      .toLowerCase() || 'untitled';
+    
+    const folderPath = `videos/${userId}/${videoId}_${sanitizedTitle}`;
     
     if (this.useLocalStorage) {
       const fullPath = path.join(this.localStoragePath, folderPath);
       fs.mkdirSync(fullPath, { recursive: true });
+      console.log('[STORAGE] Created local folder:', fullPath);
     }
     
     return folderPath;

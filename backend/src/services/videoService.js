@@ -11,17 +11,18 @@ class VideoService {
    */
   async createVideo(videoData) {
     try {
-      const video = await Video.create({
-        ...videoData,
-        id: uuidv4()
-      });
+      console.log('[VIDEO_SERVICE] Creating video with data:', { ...videoData, cloudStoragePath: '[path]', videoUrl: '[url]' });
+      
+      const video = await Video.create(videoData);
+
+      console.log('[VIDEO_SERVICE] Video created with ID:', video.id);
 
       // Publish event for transcoding
       await this.publishTranscodingEvent(video.id, 'video_uploaded');
 
       return video;
     } catch (error) {
-      console.error('Create video error:', error);
+      console.error('[VIDEO_SERVICE] Create video error:', error);
       throw error;
     }
   }
