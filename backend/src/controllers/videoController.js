@@ -383,6 +383,128 @@ class VideoController {
       });
     }
   }
+
+  /**
+   * Upload video chunk (for large files >30MB)
+   */
+  async uploadVideoChunk(req, res) {
+    try {
+      const { uploadId, chunkIndex, totalChunks, title, description, tags, isPublic } = req.body;
+      const userId = req.user.id;
+      const chunkFile = req.file;
+
+      console.log(`[CHUNK_UPLOAD] Chunk ${chunkIndex}/${totalChunks} for upload ${uploadId}`);
+
+      if (!chunkFile) {
+        return res.status(400).json({
+          success: false,
+          message: 'Chunk file is required'
+        });
+      }
+
+      if (!uploadId || chunkIndex === undefined || !totalChunks) {
+        return res.status(400).json({
+          success: false,
+          message: 'uploadId, chunkIndex, and totalChunks are required'
+        });
+      }
+
+      // Create temp directory for chunks
+      const fs = require('fs');
+      const path = require('path');
+      const tempDir = path.join(__dirname, '../../temp-uploads', uploadId);
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      // Save chunk
+      const chunkPath = path.join(tempDir, `chunk-${chunkIndex}`);
+      fs.copyFileSync(chunkFile.path, chunkPath);
+      console.log(`[CHUNK_UPLOAD] Saved chunk to ${chunkPath}`);
+
+      // Check if all chunks received
+      const chunks = fs.readdirSync(tempDir).filter(f => f.startsWith('chunk-')).length;
+      console.log(`[CHUNK_UPLOAD] Received ${chunks}/${totalChunks} chunks`);
+
+      if (chunks === parseInt(totalChunks)) {
+        // All chunks received, combine them
+        console.log(`[CHUNK_UPLOAD] All chunks received, combining...`);
+
+        const videoId = uuidv4();
+        const finalVideoPath = path.join(__dirname, '../../uploads', `${uploadId}-combined.mp4`);
+        const writeStream = fs.createWriteStream(finalVideoPath);
+
+        for (let i = 0; i < parseInt(totalChunks); i++) {
+          const chunk = fs.readFileSync(path.join(tempDir, `chunk-${i}`));
+          writeStream.write(chunk);
+        }
+        writeStream.end();
+
+        writeStream.on('finish', async () => {
+          try {
+            console.log(`[CHUNK_UPLOAD] Combined video saved to ${finalVideoPath}`);
+
+            // Create video folder with title
+            const folderPath = await storageService.createVideoFolder(videoId, userId, title);
+            
+            // Upload combined video
+            const videoUpload = await storageService.uploadVideo(
+              videoId,
+              userId,
+              finalVideoPath,
+              `${title || 'untitled'}.mp4`
+            );
+
+            // Create video record in database
+            const video = await videoService.createVideo({
+              id: videoId,
+              userId,
+              title,
+              description,
+              tags: Array.isArray(tags) ? tags : (tags?.split(',') || []),
+              videoUrl: videoUpload.publicUrl,
+              thumbnailUrl: null,
+              cloudStoragePath: videoUpload.path,
+              folderPath,
+              isPublic: isPublic === 'true',
+              embeddedLink: `https://yourapp.com/embed/${videoId}`,
+              transcodingStatus: 'pending'
+            });
+
+            // Cleanup
+            fs.rmSync(tempDir, { recursive: true, force: true });
+            fs.unlinkSync(finalVideoPath);
+
+            res.status(201).json({
+              success: true,
+              message: 'Video uploaded successfully from chunks',
+              data: video
+            });
+          } catch (error) {
+            console.error('[CHUNK_UPLOAD] Error finalizing upload:', error);
+            res.status(500).json({
+              success: false,
+              message: error.message
+            });
+          }
+        });
+      } else {
+        res.json({
+          success: true,
+          message: `Chunk ${chunkIndex} received (${chunks}/${totalChunks})`,
+          uploadId,
+          chunkIndex,
+          totalChunks
+        });
+      }
+    } catch (error) {
+      console.error('[CHUNK_UPLOAD] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new VideoController();

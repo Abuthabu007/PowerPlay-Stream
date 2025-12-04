@@ -4,11 +4,11 @@ const videoController = require('../controllers/videoController');
 const { iapAuth, authorize } = require('../middleware/auth');
 const multer = require('multer');
 
-// Configure multer for file uploads with 500MB limit
+// Configure multer for file uploads (Cloud Run has 32MB hard limit)
 const upload = multer({ 
   dest: 'uploads/',
   limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB
+    fileSize: 30 * 1024 * 1024 // 30MB (to stay under Cloud Run 32MB limit)
   }
 });
 
@@ -21,6 +21,16 @@ router.use(iapAuth);
 router.post('/upload',
   upload.fields([{ name: 'video', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]),
   videoController.uploadVideo
+);
+
+/**
+ * Chunked Video Upload (for videos >30MB)
+ * Request body: { uploadId, chunkIndex, totalChunks, title, description, tags, isPublic }
+ * File: chunk data in 'chunk' field
+ */
+router.post('/upload-chunk',
+  upload.single('chunk'),
+  videoController.uploadVideoChunk
 );
 
 /**
