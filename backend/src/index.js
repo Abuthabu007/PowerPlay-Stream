@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const sequelize = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
+const { iapAuth } = require('./middleware/auth');
 const videoRoutes = require('./routes/videoRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 
@@ -39,7 +40,7 @@ app.get('/health', (req, res) => {
 });
 
 // Get IAP user info
-app.get('/api/user-info', (req, res) => {
+app.get('/api/user-info', iapAuth, (req, res) => {
   try {
     if (req.user) {
       res.json({
