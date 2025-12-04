@@ -1,5 +1,68 @@
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 require('dotenv').config();
+
+// Cache for Google's public keys
+let googlePublicKeys = null;
+let keysExpiry = 0;
+
+/**
+ * Fetch Google's public keys for JWT verification
+ */
+async function getGooglePublicKeys() {
+  const now = Date.now();
+  
+  // Use cache if not expired
+  if (googlePublicKeys && keysExpiry > now) {
+    return googlePublicKeys;
+  }
+
+  try {
+    const response = await axios.get('https://www.googleapis.com/oauth2/v1/certs');
+    googlePublicKeys = response.data;
+    // Cache for 1 hour
+    keysExpiry = now + (60 * 60 * 1000);
+    return googlePublicKeys;
+  } catch (error) {
+    console.error('Failed to fetch Google public keys:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Verify IAP JWT token
+ */
+async function verifyIAPToken(token, expectedAudience) {
+  try {
+    // Decode without verification first to get the header
+    const decoded = jwt.decode(token, { complete: true });
+    
+    if (!decoded) {
+      throw new Error('Invalid token format');
+    }
+
+    // Get Google's public keys
+    const keys = await getGooglePublicKeys();
+    const keyId = decoded.header.kid;
+    
+    if (!keys[keyId]) {
+      throw new Error(`Key ID ${keyId} not found in Google public keys`);
+    }
+
+    const publicKey = keys[keyId];
+
+    // Verify the token
+    const verified = jwt.verify(token, publicKey, {
+      algorithms: ['RS256'],
+      audience: expectedAudience
+    });
+
+    return verified;
+  } catch (error) {
+    console.error('IAP token verification failed:', error.message);
+    throw error;
+  }
+}
 
 /**
  * IAP Authentication Middleware
@@ -19,7 +82,7 @@ const iapAuth = async (req, res, next) => {
         where: { iapId: 'dev-user' },
         defaults: {
           id: 'dev-user',
-          email: 'ahamedbeema1989@gmail.com, amrithachand@gmail.com, muskansharma2598@gmail.com',
+          email: 'dev@example.com',
           name: 'Development User',
           iapId: 'dev-user',
           role: 'user'
@@ -36,37 +99,42 @@ const iapAuth = async (req, res, next) => {
       return next();
     }
 
-    console.log(`[AUTH] DISABLE_IAP_VALIDATION env var: ${process.env.DISABLE_IAP_VALIDATION}`);
+    console.log(`[AUTH] IAP validation enabled`);
     console.log(`[AUTH] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
 
     // Get IAP JWT token from Authorization header
-    const iapJwt = req.headers.authorization?.split('Bearer ')[1];
-    
-    if (!iapJwt) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: Missing IAP token'
+        message: 'Unauthorized: Missing Authorization header'
       });
     }
 
-    // Verify JWT (in production, verify against Google's public keys)
-    const decoded = jwt.decode(iapJwt, { complete: true });
-    
-    if (!decoded) {
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: Invalid token'
+        message: 'Unauthorized: Invalid Authorization header format'
       });
     }
+
+    const iapJwt = parts[1];
+
+    // Get the expected audience (Cloud Run service URL or project ID)
+    const expectedAudience = process.env.IAP_AUDIENCE || `/projects/${process.env.GCP_PROJECT_ID}/global/backendServices/YOUR_SERVICE_ID`;
+    
+    // Verify the JWT token
+    const decoded = await verifyIAPToken(iapJwt, expectedAudience);
 
     // Create/upsert user in database
     const User = require('../models/User');
     const [user] = await User.findOrCreate({
-      where: { iapId: decoded.payload.sub },
+      where: { iapId: decoded.sub },
       defaults: {
-        email: decoded.payload.email || 'no-email@example.com',
-        name: decoded.payload.name || 'Unknown User',
-        iapId: decoded.payload.sub,
+        email: decoded.email || 'no-email@example.com',
+        name: decoded.name || decoded.email || 'Unknown User',
+        iapId: decoded.sub,
         role: 'user'
       }
     });
@@ -80,12 +148,13 @@ const iapAuth = async (req, res, next) => {
       role: user.role || 'user'
     };
 
+    console.log(`[AUTH] User authenticated: ${user.email}`);
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('[AUTH] Authentication error:', error.message);
     return res.status(401).json({
       success: false,
-      message: 'Unauthorized'
+      message: 'Unauthorized: ' + error.message
     });
   }
 };

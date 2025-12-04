@@ -42,7 +42,7 @@ RUN mkdir -p /app/uploads
 
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV DISABLE_IAP_VALIDATION=true
+ENV DISABLE_IAP_VALIDATION=false
 
 # Health check with increased startup time
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
