@@ -44,6 +44,14 @@ if (process.env.NODE_ENV === 'production' || process.env.USE_MYSQL === 'true') {
         }
       });
     }
+  } else {
+    // Production fallback: SQLite (when Cloud SQL not configured)
+    console.warn('WARNING: Cloud SQL credentials not provided. Falling back to SQLite in production.');
+    sequelize = new Sequelize({
+      dialect: 'sqlite',
+      storage: './powerplay_stream.db',
+      logging: process.env.NODE_ENV === 'development' ? console.log : false
+    });
   }
 } else {
   // Development: SQLite (file-based, no setup needed)
@@ -52,6 +60,10 @@ if (process.env.NODE_ENV === 'production' || process.env.USE_MYSQL === 'true') {
     storage: './powerplay_stream.db',
     logging: process.env.NODE_ENV === 'development' ? console.log : false
   });
+}
+
+if (!sequelize) {
+  throw new Error('Failed to initialize Sequelize database connection.');
 }
 
 module.exports = sequelize;
