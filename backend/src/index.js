@@ -11,9 +11,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-});
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
@@ -31,9 +28,9 @@ app.use(express.static(publicPath));
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
-// Health check
+// Health check - simple and fast, doesn't depend on database
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Get IAP user info
@@ -72,14 +69,14 @@ async function startServer() {
     // Sync models
     await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
     console.log('Database models synced');
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console.warn('Database initialization warning (app will continue with fallback):', error.message);
   }
+
+  // Start listening regardless of database status
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }
 
 startServer();
