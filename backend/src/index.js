@@ -36,6 +36,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Get IAP user info
+app.get('/api/user-info', (req, res) => {
+  try {
+    if (req.user) {
+      res.json({
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name,
+        iapId: req.user.iapId,
+        role: req.user.role || 'user'
+      });
+    } else {
+      res.status(401).json({ error: 'User not authenticated' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve index.html for all non-API routes (SPA support)
 app.get('*', (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));

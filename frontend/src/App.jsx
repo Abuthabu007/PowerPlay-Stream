@@ -12,20 +12,33 @@ function App() {
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
-        // In development with IAP disabled, auto-authenticate
+        // Check if IAP is enabled by looking at the response headers
         const response = await fetch('/health');
         if (response.ok) {
-          const data = await response.json();
-          // If we can reach the health endpoint, we're in dev mode with IAP disabled
-          setUser({
-            id: 'dev-user',
-            name: 'Development User',
-            email: 'dev@example.com',
-            iapId: 'dev-user'
-          });
-          setUserRole('admin');
+          // Get IAP user info from the backend
+          const response2 = await fetch('/api/user-info');
+          if (response2.ok) {
+            const userData = await response2.json();
+            setUser({
+              id: userData.id || 'iap-user',
+              name: userData.name || 'IAP User',
+              email: userData.email || 'user@example.com',
+              iapId: userData.iapId || userData.id
+            });
+            setUserRole(userData.role || 'user');
+          } else {
+            // Dev mode - auto-authenticate
+            setUser({
+              id: 'dev-user',
+              name: 'Development User',
+              email: 'dev@example.com',
+              iapId: 'dev-user'
+            });
+            setUserRole('admin');
+          }
         }
       } catch (err) {
+        console.warn('Auth check failed:', err);
         // Check if user has stored token
         const token = localStorage.getItem('iapToken');
         if (token) {
