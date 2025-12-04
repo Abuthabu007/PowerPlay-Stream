@@ -19,7 +19,7 @@ const iapAuth = async (req, res, next) => {
         where: { iapId: 'dev-user' },
         defaults: {
           id: 'dev-user',
-          email: 'ahamedbeema1989@gmail.com',
+          email: 'ahamedbeema1989@gmail.com', "amrithachand@gmail.com", "muskansharma2598@gmail.com",
           name: 'Development User',
           iapId: 'dev-user',
           role: 'user'
