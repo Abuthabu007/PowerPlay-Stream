@@ -21,6 +21,9 @@ const iapAuth = (req, res, next) => {
     return next();
   }
 
+  console.log(`[AUTH] DISABLE_IAP_VALIDATION env var: ${process.env.DISABLE_IAP_VALIDATION}`);
+  console.log(`[AUTH] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+
   try {
     // Get IAP JWT token from Authorization header
     const iapJwt = req.headers.authorization?.split('Bearer ')[1];
