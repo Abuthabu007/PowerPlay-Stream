@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorHandler');
 const { iapAuth } = require('./middleware/auth');
 const videoRoutes = require('./routes/videoRoutes');
 const searchRoutes = require('./routes/searchRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use(express.static(publicPath));
 // API Routes
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check - simple and fast, doesn't depend on database
 app.get('/health', (req, res) => {

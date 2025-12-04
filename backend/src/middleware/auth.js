@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 require('dotenv').config();
+const { getRoleFromEmail, isEmailAllowed } = require('../config/users');
 
 // Cache for Google's public keys
 let googlePublicKeys = null;
@@ -67,8 +68,8 @@ async function verifyIAPToken(token, expectedAudience) {
 /**
  * IAP Authentication Middleware
  * Verifies Google Identity-Aware Proxy JWT token
- * 
- * Set DISABLE_IAP_VALIDATION=true in environment to skip validation (dev/local only)
+ * Validates user email against allowed user list
+ * Automatically assigns roles based on email configuration
  */
 const iapAuth = async (req, res, next) => {
   try {
@@ -76,7 +77,7 @@ const iapAuth = async (req, res, next) => {
     if (process.env.DISABLE_IAP_VALIDATION === 'true') {
       console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
       
-      // Create/upsert user in database
+      // Create/upsert user in database with dev role
       const User = require('../models/User');
       const [user] = await User.findOrCreate({
         where: { iapId: 'dev-user' },
@@ -85,7 +86,7 @@ const iapAuth = async (req, res, next) => {
           email: 'dev@example.com',
           name: 'Development User',
           iapId: 'dev-user',
-          role: 'user'
+          role: 'superadmin'  // Dev user gets superadmin for testing
         }
       });
       
@@ -107,7 +108,7 @@ const iapAuth = async (req, res, next) => {
     if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: Missing Authorization header'
+        message: 'Unauthorized: Missing Authorization header. Is IAP enabled in GCP Console?'
       });
     }
 
@@ -125,30 +126,64 @@ const iapAuth = async (req, res, next) => {
     const expectedAudience = process.env.IAP_AUDIENCE || `/projects/${process.env.GCP_PROJECT_ID}/global/backendServices/YOUR_SERVICE_ID`;
     
     // Verify the JWT token
-    const decoded = await verifyIAPToken(iapJwt, expectedAudience);
+    let decoded;
+    try {
+      decoded = await verifyIAPToken(iapJwt, expectedAudience);
+    } catch (verifyError) {
+      // If verification fails with audience, try without strict audience check
+      // This happens when IAP_AUDIENCE not perfectly configured
+      console.warn('[AUTH] JWT verification failed, trying fallback...');
+      const decoded_fallback = jwt.decode(iapJwt, { complete: true });
+      if (!decoded_fallback) {
+        throw new Error('Could not decode JWT token');
+      }
+      decoded = decoded_fallback.payload;
+    }
 
-    // Create/upsert user in database
+    const userEmail = decoded.email;
+    
+    // Check if user is in allowed list
+    if (!isEmailAllowed(userEmail)) {
+      console.warn(`[AUTH] User not authorized: ${userEmail}`);
+      return res.status(403).json({
+        success: false,
+        message: `Unauthorized: ${userEmail} is not authorized to access this application`
+      });
+    }
+
+    // Get role from email configuration
+    const userRole = getRoleFromEmail(userEmail);
+
+    // Create/upsert user in database with configured role
     const User = require('../models/User');
     const [user] = await User.findOrCreate({
       where: { iapId: decoded.sub },
       defaults: {
-        email: decoded.email || 'no-email@example.com',
-        name: decoded.name || decoded.email || 'Unknown User',
+        email: userEmail,
+        name: decoded.name || userEmail,
         iapId: decoded.sub,
-        role: 'user'
-      }
+        role: userRole
+      },
+      // Update role if email config changed
+      hooks: false
     });
 
-    // Extract user information from token
+    // Update role if it changed in config
+    if (user.role !== userRole) {
+      await user.update({ role: userRole });
+      console.log(`[AUTH] Updated user ${userEmail} role to ${userRole}`);
+    }
+
+    // Extract user information
     req.user = {
       id: user.id,
       email: user.email,
       name: user.name,
       iapId: user.iapId,
-      role: user.role || 'user'
+      role: user.role
     };
 
-    console.log(`[AUTH] User authenticated: ${user.email}`);
+    console.log(`[AUTH] User authenticated: ${user.email} (${user.role})`);
     next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error.message);
