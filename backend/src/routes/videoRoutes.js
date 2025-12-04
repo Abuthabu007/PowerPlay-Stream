@@ -4,8 +4,13 @@ const videoController = require('../controllers/videoController');
 const { iapAuth, authorize } = require('../middleware/auth');
 const multer = require('multer');
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for file uploads with 500MB limit
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB
+  }
+});
 
 // All video routes require authentication
 router.use(iapAuth);
