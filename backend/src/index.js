@@ -70,21 +70,44 @@ app.use(errorHandler);
 
 // Database sync and server start
 async function startServer() {
+  const startTime = Date.now();
+  
   try {
-    await sequelize.authenticate();
-    console.log('Database connection established');
-
-    // Sync models
-    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
-    console.log('Database models synced');
+    console.log('[STARTUP] Attempting database connection...');
+    
+    // Set a timeout for database operations
+    const dbPromise = Promise.all([
+      sequelize.authenticate(),
+      sequelize.sync({ alter: process.env.NODE_ENV === 'development', logging: false })
+    ]);
+    
+    // 30 second timeout for database operations
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timeout (30s)')), 30000)
+    );
+    
+    await Promise.race([dbPromise, timeoutPromise]);
+    
+    console.log('[STARTUP] Database connection established and models synced');
   } catch (error) {
-    console.warn('Database initialization warning (app will continue with fallback):', error.message);
+    console.warn('[STARTUP] Database initialization warning (app will continue):', error.message);
+    console.warn('[STARTUP] This is expected in Cloud Run - using SQLite as fallback');
   }
 
   // Start listening regardless of database status
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+  const elapsedTime = Date.now() - startTime;
+  console.log(`[STARTUP] Starting HTTP server on port ${PORT}...`);
+  
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[STARTUP] ✅ Server running on port ${PORT} (startup took ${elapsedTime}ms)`);
+  });
+
+  // Handle server errors
+  server.on('error', (err) => {
+    console.error('[STARTUP] Server error:', err);
+    process.exit(1);
   });
 }
 
+console.log('[STARTUP] Node process started, initializing server...');
 startServer();

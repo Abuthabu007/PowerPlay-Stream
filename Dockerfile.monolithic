@@ -44,8 +44,8 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV DISABLE_IAP_VALIDATION=false
 
-# Health check with increased startup time
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# Health check with increased startup time (60s) for Cloud Run
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)}).on('error', () => process.exit(1))"
 
 # Start Node app
