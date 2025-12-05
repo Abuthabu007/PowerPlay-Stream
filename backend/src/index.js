@@ -2,12 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const sequelize = require('./config/database');
+
 const errorHandler = require('./middleware/errorHandler');
 const { iapAuth } = require('./middleware/auth');
 const videoRoutes = require('./routes/videoRoutes');
-const searchRoutes = require('./routes/searchRoutes');
-const userRoutes = require('./routes/userRoutes');
 
 dotenv.config();
 
@@ -31,26 +29,25 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const publicPath = path.join(__dirname, '../../frontend/build');
 app.use(express.static(publicPath));
 
+
 // API Routes
 app.use('/api/videos', videoRoutes);
-app.use('/api/search', searchRoutes);
-app.use('/api/users', userRoutes);
 
-// Health check - simple and fast, doesn't depend on database
+
+// Health check - simple and fast
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Get IAP user info
+
+// Get IAP user info (to be refactored for Firestore-based user info)
 app.get('/api/user-info', iapAuth, (req, res) => {
   try {
     if (req.user) {
       res.json({
-        id: req.user.id,
         email: req.user.email,
         name: req.user.name,
-        iapId: req.user.iapId,
-        role: req.user.role || 'user'
+        iapId: req.user.iapId
       });
     } else {
       res.status(401).json({ error: 'User not authenticated' });
@@ -65,55 +62,12 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
+
 // Error handler
 app.use(errorHandler);
 
-// Database sync and server start
-async function startServer() {
-  const startTime = Date.now();
-  console.log('[STARTUP] ========== SERVER STARTUP BEGIN ==========');
-  console.log('[STARTUP] Node version:', process.version);
-  console.log('[STARTUP] Environment:', process.env.NODE_ENV);
-  console.log('[STARTUP] Port:', PORT);
-  console.log('[STARTUP] IAP Validation:', process.env.DISABLE_IAP_VALIDATION);
-  
-  // Start the server FIRST before any database operations
-  // This ensures health checks pass immediately
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    const elapsedTime = Date.now() - startTime;
-    console.log(`[STARTUP] ✅ HTTP Server listening on port ${PORT} (${elapsedTime}ms)`);
-    console.log('[STARTUP] ========== SERVER STARTUP COMPLETE ==========');
-  });
-
-  // Handle server errors
-  server.on('error', (err) => {
-    console.error('[STARTUP] ❌ Server error:', err.message);
-    process.exit(1);
-  });
-
-  // Initialize database in the background (non-blocking)
-  setImmediate(async () => {
-    try {
-      console.log('[DB] Starting database initialization (non-blocking)...');
-      
-      // Set timeout for DB operations
-      const dbTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout')), 20000)
-      );
-      
-      const dbOps = Promise.all([
-        sequelize.authenticate(),
-        sequelize.sync({ alter: false, logging: false }) // Don't alter in production
-      ]);
-      
-      await Promise.race([dbOps, dbTimeout]);
-      console.log('[DB] ✅ Database connected and synced');
-    } catch (error) {
-      console.warn('[DB] ⚠️  Database initialization failed:', error.message);
-      console.warn('[DB] App will continue with local SQLite fallback');
-    }
-  });
-}
-
+// Start server (no DB logic)
 console.log('[STARTUP] Process starting...');
-startServer();
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[STARTUP] ✅ HTTP Server listening on port ${PORT}`);
+});

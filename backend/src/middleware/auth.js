@@ -77,25 +77,12 @@ const iapAuth = async (req, res, next) => {
     if (process.env.DISABLE_IAP_VALIDATION === 'true') {
       console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
       
-      // Create/upsert user in database with dev role
-      const User = require('../models/User');
-      const [user] = await User.findOrCreate({
-        where: { iapId: 'dev-user' },
-        defaults: {
-          id: 'dev-user',
-          email: 'dev@example.com',
-          name: 'Development User',
-          iapId: 'dev-user',
-          role: 'superadmin'  // Dev user gets superadmin for testing
-        }
-      });
-      
+      // Dev user mock (no DB)
       req.user = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        iapId: user.iapId,
-        role: user.role || 'user'
+        email: 'dev@example.com',
+        name: 'Development User',
+        iapId: 'dev-user',
+        role: 'superadmin'
       };
       return next();
     }
@@ -154,36 +141,15 @@ const iapAuth = async (req, res, next) => {
     // Get role from email configuration
     const userRole = getRoleFromEmail(userEmail);
 
-    // Create/upsert user in database with configured role
-    const User = require('../models/User');
-    const [user] = await User.findOrCreate({
-      where: { iapId: decoded.sub },
-      defaults: {
-        email: userEmail,
-        name: decoded.name || userEmail,
-        iapId: decoded.sub,
-        role: userRole
-      },
-      // Update role if email config changed
-      hooks: false
-    });
-
-    // Update role if it changed in config
-    if (user.role !== userRole) {
-      await user.update({ role: userRole });
-      console.log(`[AUTH] Updated user ${userEmail} role to ${userRole}`);
-    }
-
-    // Extract user information
+    // Set user info from JWT (no DB)
     req.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      iapId: user.iapId,
-      role: user.role
+      email: userEmail,
+      name: decoded.name || userEmail,
+      iapId: decoded.sub,
+      role: userRole
     };
 
-    console.log(`[AUTH] User authenticated: ${user.email} (${user.role})`);
+    console.log(`[AUTH] User authenticated: ${userEmail} (${userRole})`);
     next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error.message);
