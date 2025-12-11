@@ -1,69 +1,34 @@
-const { Sequelize } = require('sequelize');
+const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 require('dotenv').config();
 
-// For local development, use SQLite (no setup needed)
-// For production, use Cloud SQL (PostgreSQL or MySQL)
-
-let sequelize;
-
-if (process.env.NODE_ENV === 'production' || process.env.USE_MYSQL === 'true') {
-  // Production: Cloud SQL configuration
-  if (process.env.CLOUD_SQL_USER && process.env.CLOUD_SQL_HOST && process.env.CLOUD_SQL_PASSWORD) {
-    // PostgreSQL (preferred for Cloud SQL)
-    if (process.env.CLOUD_SQL_PORT === '5432') {
-      sequelize = new Sequelize({
-        host: process.env.CLOUD_SQL_HOST,
-        username: process.env.CLOUD_SQL_USER,
-        password: process.env.CLOUD_SQL_PASSWORD,
-        database: process.env.CLOUD_SQL_DATABASE || 'video_metadata',
-        port: process.env.CLOUD_SQL_PORT || 5432,
-        dialect: 'postgres',
-        logging: process.env.NODE_ENV === 'development' ? console.log : false,
-        pool: {
-          max: 10,
-          min: 2,
-          acquire: 30000,
-          idle: 10000
-        }
-      });
-    } else {
-      // MySQL
-      sequelize = new Sequelize({
-        host: process.env.CLOUD_SQL_HOST,
-        username: process.env.CLOUD_SQL_USER,
-        password: process.env.CLOUD_SQL_PASSWORD,
-        database: process.env.CLOUD_SQL_DATABASE || 'powerplay_stream',
-        port: process.env.CLOUD_SQL_PORT || 3306,
-        dialect: 'mysql',
-        logging: process.env.NODE_ENV === 'development' ? console.log : false,
-        pool: {
-          max: 10,
-          min: 2,
-          acquire: 30000,
-          idle: 10000
-        }
-      });
-    }
-  } else {
-    // Production fallback: SQLite (when Cloud SQL not configured)
-    console.warn('WARNING: Cloud SQL credentials not provided. Falling back to SQLite in production.');
-    sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: './powerplay_stream.db',
-      logging: process.env.NODE_ENV === 'development' ? console.log : false
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  // Try to initialize with service account from environment variable or file
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || './serviceAccountKey.json';
+  
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(require(serviceAccountPath)),
+      projectId: process.env.GCP_PROJECT_ID
+    });
+  } catch (err) {
+    // If service account file not found, initialize with default credentials
+    // (will use GOOGLE_APPLICATION_CREDENTIALS env variable)
+    admin.initializeApp({
+      projectId: process.env.GCP_PROJECT_ID
     });
   }
-} else {
-  // Development: SQLite (file-based, no setup needed)
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: './powerplay_stream.db',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false
-  });
 }
 
-if (!sequelize) {
-  throw new Error('Failed to initialize Sequelize database connection.');
+// Get Firestore instance
+const db = getFirestore();
+
+// Enable offline persistence for development (optional)
+if (process.env.NODE_ENV === 'development') {
+  db.settings({ experimentalForceLongPolling: true });
 }
 
-module.exports = sequelize;
+console.log(`Firestore initialized for project: ${process.env.GCP_PROJECT_ID || 'default'}`);
+
+module.exports = { admin, db };

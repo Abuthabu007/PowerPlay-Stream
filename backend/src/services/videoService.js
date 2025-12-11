@@ -1,11 +1,9 @@
-
-// TODO: Replace with Firestore integration for metadata
+const Video = require('../models/Video');
 const storageService = require('./storageService');
-// const { v4: uuidv4 } = require('uuid');
 
 class VideoService {
   /**
-   * Create new video metadata
+   * Create new video metadata in Firestore
    */
   async createVideo(videoData) {
     try {
@@ -39,8 +37,7 @@ class VideoService {
         where.isPublic = filters.isPublic;
       }
 
-      // TODO: Replace with Firestore query for user videos
-      return [];
+      return await Video.findAll({ where });
     } catch (error) {
       console.error('Get user videos error:', error);
       throw error;
@@ -52,8 +49,12 @@ class VideoService {
    */
   async getPublicVideos(filters = {}) {
     try {
-      // TODO: Replace with Firestore query for public videos
-      return [];
+      const where = {
+        isPublic: true,
+        isDeleted: false
+      };
+
+      return await Video.findAll({ where });
     } catch (error) {
       console.error('Get public videos error:', error);
       throw error;
@@ -65,8 +66,7 @@ class VideoService {
    */
   async getVideo(videoId) {
     try {
-      // TODO: Replace with Firestore query for single video
-      return null;
+      return await Video.findByPk(videoId);
     } catch (error) {
       console.error('Get video error:', error);
       throw error;
@@ -78,8 +78,13 @@ class VideoService {
    */
   async updateVideo(videoId, userId, updateData) {
     try {
-      // TODO: Replace with Firestore update for video
-      return null;
+      // Verify ownership
+      const video = await Video.findByPk(videoId);
+      if (!video || video.userId !== userId) {
+        throw new Error('Not authorized to update this video');
+      }
+
+      return await Video.update(updateData, { where: { id: videoId } });
     } catch (error) {
       console.error('Update video error:', error);
       throw error;
@@ -91,8 +96,15 @@ class VideoService {
    */
   async toggleVideoPrivacy(videoId, userId) {
     try {
-      // TODO: Replace with Firestore update for privacy
-      return null;
+      const video = await Video.findByPk(videoId);
+      if (!video || video.userId !== userId) {
+        throw new Error('Not authorized to update this video');
+      }
+
+      return await Video.update(
+        { isPublic: !video.isPublic },
+        { where: { id: videoId } }
+      );
     } catch (error) {
       console.error('Toggle privacy error:', error);
       throw error;
@@ -104,8 +116,15 @@ class VideoService {
    */
   async markVideoDownloaded(videoId, userId) {
     try {
-      // TODO: Replace with Firestore update for download status
-      return null;
+      const video = await Video.findByPk(videoId);
+      if (!video || video.userId !== userId) {
+        throw new Error('Not authorized to update this video');
+      }
+
+      return await Video.update(
+        { isDownloaded: true },
+        { where: { id: videoId } }
+      );
     } catch (error) {
       console.error('Mark downloaded error:', error);
       throw error;
@@ -117,8 +136,13 @@ class VideoService {
    */
   async softDeleteVideo(videoId, userId) {
     try {
-      // TODO: Replace with Firestore soft delete
-      return { success: true, message: 'Video deleted (mock)' };
+      const video = await Video.findByPk(videoId);
+      if (!video || video.userId !== userId) {
+        throw new Error('Not authorized to delete this video');
+      }
+
+      await Video.softDelete(videoId);
+      return { success: true, message: 'Video deleted' };
     } catch (error) {
       console.error('Soft delete error:', error);
       throw error;
@@ -130,8 +154,34 @@ class VideoService {
    */
   async permanentDeleteVideo(videoId, userId, userRole) {
     try {
-      // TODO: Replace with Firestore permanent delete and Cloud Storage cleanup
-      return { success: true, message: 'Video permanently deleted (mock)' };
+      if (userRole !== 'superadmin') {
+        throw new Error('Only superadmin can permanently delete videos');
+      }
+
+      const video = await Video.findByPk(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
+
+      // Delete from Cloud Storage if file exists
+      if (video.cloudStoragePath) {
+        try {
+          await storageService.deleteFile(video.cloudStoragePath);
+        } catch (err) {
+          console.warn('[VIDEO_SERVICE] Could not delete file from storage:', err.message);
+        }
+      }
+
+      // Delete captions associated with video
+      const Caption = require('../models/Caption');
+      const captions = await Caption.findAll({ where: { videoId } });
+      for (const caption of captions) {
+        await Caption.destroy({ where: { id: caption.id } });
+      }
+
+      // Delete video from Firestore
+      await Video.destroy({ where: { id: videoId } });
+      return { success: true, message: 'Video permanently deleted' };
     } catch (error) {
       console.error('Permanent delete error:', error);
       throw error;
@@ -143,7 +193,7 @@ class VideoService {
    */
   async incrementViewCount(videoId) {
     try {
-      // TODO: Replace with Firestore view count increment
+      await Video.incrementViewCount(videoId);
     } catch (error) {
       console.error('Increment view count error:', error);
     }
@@ -154,7 +204,8 @@ class VideoService {
    */
   async publishTranscodingEvent(videoId, eventType) {
     try {
-      // TODO: Remove Pub/Sub event publishing (not needed)
+      // Pub/Sub integration can be added here if needed
+      console.log(`[VIDEO_SERVICE] Event: ${eventType} for video ${videoId}`);
     } catch (error) {
       console.error('Publish event error:', error);
     }
@@ -165,8 +216,14 @@ class VideoService {
    */
   async searchVideos(query, userId = null) {
     try {
-      // TODO: Replace with Firestore search
-      return [];
+      const results = await Video.search(query, { limit: 50 });
+      
+      // If userId provided, filter to user's videos and public videos
+      if (userId) {
+        return results.filter(v => v.userId === userId || v.isPublic);
+      }
+      
+      return results.filter(v => v.isPublic);
     } catch (error) {
       console.error('Search error:', error);
       throw error;

@@ -1,96 +1,151 @@
 const Video = require('../models/Video');
-const { Op } = require('sequelize');
 
-class VertexAiService {
+/**
+ * Simple metadata-based search service using Firestore
+ * No Vertex AI integration needed - uses video metadata (title, description, tags)
+ */
+class SearchService {
   /**
-   * Get search suggestions using metadata
-   * In production, integrate with actual Vertex AI Matching Engine API
+   * Search videos by query (searches title, description, and tags)
    */
-  async getSuggestions(query, limit = 5) {
+  async search(query, limit = 10) {
     try {
-      // Current implementation: metadata-based search
-      // TODO: Integrate with Vertex AI Matching Engine for embeddings-based search
-      
-      const videos = await Video.findAll({
+      if (!query || query.trim().length === 0) {
+        return [];
+      }
+
+      const searchTerm = query.toLowerCase().trim();
+
+      // Get all public, non-deleted videos
+      const allVideos = await Video.findAll({
         where: {
           isDeleted: false,
-          isPublic: true,
-          [Op.or]: [
-            { title: { [Op.like]: `%${query}%` } },
-            { description: { [Op.like]: `%${query}%` } }
-          ]
+          isPublic: true
         },
-        attributes: ['id', 'title', 'description', 'tags'],
-        limit,
-        raw: true
+        limit: limit * 2 // Fetch extra to account for filtering
       });
 
-      return videos;
+      // Client-side filtering and scoring
+      const scored = allVideos
+        .map(video => {
+          let score = 0;
+
+          // Title match (highest priority)
+          if (video.title.toLowerCase().includes(searchTerm)) {
+            score += 10;
+            // Bonus if title starts with search term
+            if (video.title.toLowerCase().startsWith(searchTerm)) {
+              score += 5;
+            }
+          }
+
+          // Description match
+          if (video.description && video.description.toLowerCase().includes(searchTerm)) {
+            score += 5;
+          }
+
+          // Tag match
+          if (video.tags && Array.isArray(video.tags)) {
+            const matchingTags = video.tags.filter(tag =>
+              tag.toLowerCase().includes(searchTerm)
+            ).length;
+            score += matchingTags * 3;
+          }
+
+          return { video, score };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => {
+          // Sort by score first, then by view count (popularity)
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+          return b.video.viewCount - a.video.viewCount;
+        })
+        .slice(0, limit)
+        .map(item => item.video);
+
+      return scored;
     } catch (error) {
-      console.error('Get suggestions error:', error);
+      console.error('Search error:', error);
       throw error;
     }
   }
 
   /**
-   * Find similar videos using Vertex AI embeddings
-   * TODO: Implement Vertex AI Matching Engine integration
+   * Get search suggestions (same as search but limited)
+   */
+  async getSuggestions(query, limit = 5) {
+    return this.search(query, limit);
+  }
+
+  /**
+   * Find similar videos by tags
    */
   async findSimilarVideos(videoId, limit = 5) {
     try {
-      const video = await Video.findByPk(videoId, {
-        attributes: ['id', 'title', 'tags', 'description']
-      });
+      const video = await Video.findByPk(videoId);
 
       if (!video) {
         throw new Error('Video not found');
       }
 
-      // For now, return videos with similar tags
-      const similarVideos = await Video.findAll({
+      // If no tags, return most viewed public videos
+      if (!video.tags || video.tags.length === 0) {
+        const popularVideos = await Video.findAll({
+          where: {
+            isDeleted: false,
+            isPublic: true
+          },
+          limit: limit * 2
+        });
+
+        return popularVideos
+          .filter(v => v.id !== videoId)
+          .sort((a, b) => b.viewCount - a.viewCount)
+          .slice(0, limit);
+      }
+
+      // Find videos with matching tags
+      const allVideos = await Video.findAll({
         where: {
           isDeleted: false,
-          isPublic: true,
-          id: { [Op.ne]: videoId },
-          tags: { [Op.like]: `%${video.tags[0]}%` }
+          isPublic: true
         },
-        limit,
-        raw: true
+        limit: limit * 3
       });
 
-      return similarVideos;
+      const scored = allVideos
+        .filter(v => v.id !== videoId)
+        .map(candidate => {
+          if (!candidate.tags) {
+            return { video: candidate, score: 0 };
+          }
+
+          // Count matching tags
+          const matchingTags = candidate.tags.filter(tag =>
+            video.tags.includes(tag)
+          ).length;
+
+          return {
+            video: candidate,
+            score: matchingTags > 0 ? matchingTags : 0
+          };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return b.video.viewCount - a.video.viewCount;
+        })
+        .slice(0, limit)
+        .map(item => item.video);
+
+      return scored;
     } catch (error) {
       console.error('Find similar videos error:', error);
       throw error;
     }
   }
-
-  /**
-   * Perform advanced semantic search
-   * TODO: Implement using Vertex AI Text Embedding API
-   */
-  async semanticSearch(query, limit = 10) {
-    try {
-      // Placeholder for Vertex AI semantic search
-      // This will use embeddings to find semantically similar content
-      
-      const results = await Video.findAll({
-        where: {
-          isDeleted: false,
-          isPublic: true
-        },
-        attributes: ['id', 'title', 'description', 'tags', 'viewCount'],
-        order: [['viewCount', 'DESC']],
-        limit,
-        raw: true
-      });
-
-      return results;
-    } catch (error) {
-      console.error('Semantic search error:', error);
-      throw error;
-    }
-  }
 }
 
-module.exports = new VertexAiService();
+module.exports = new SearchService();

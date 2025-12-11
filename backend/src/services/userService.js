@@ -8,7 +8,7 @@ class UserService {
   async getOrCreateUser(iapData) {
     try {
       let user = await User.findOne({
-        where: { iapId: iapData.iapId }
+        iapId: iapData.iapId
       });
 
       if (!user) {
@@ -58,9 +58,7 @@ class UserService {
         throw new Error('User not found');
       }
 
-      user.role = newRole;
-      await user.save();
-      return user;
+      return await User.update({ role: newRole }, { where: { id: userId } });
     } catch (error) {
       console.error('Update user role error:', error);
       throw error;
@@ -70,21 +68,40 @@ class UserService {
   /**
    * Get all users (admin only)
    */
-  async getAllUsers(adminRole, limit = 50, offset = 0) {
+  async getAllUsers(adminRole, limit = 50) {
     try {
       if (adminRole !== 'superadmin') {
         throw new Error('Only superadmin can list all users');
       }
 
       const users = await User.findAll({
-        limit,
-        offset,
-        order: [['createdAt', 'DESC']]
+        limit
       });
 
       return users;
     } catch (error) {
       console.error('Get all users error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deactivate user (admin only)
+   */
+  async deactivateUser(userId, adminRole) {
+    try {
+      if (adminRole !== 'superadmin') {
+        throw new Error('Only superadmin can deactivate users');
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return await User.update({ isActive: false }, { where: { id: userId } });
+    } catch (error) {
+      console.error('Deactivate user error:', error);
       throw error;
     }
   }

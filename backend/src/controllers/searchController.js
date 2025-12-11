@@ -1,4 +1,4 @@
-const vertexAiService = require('../services/vertexAiService');
+const searchService = require('../services/vertexAiService');
 
 class SearchController {
   /**
@@ -15,7 +15,7 @@ class SearchController {
         });
       }
 
-      const suggestions = await vertexAiService.getSuggestions(query, 5);
+      const suggestions = await searchService.getSuggestions(query, 5);
 
       res.json({
         success: true,
@@ -31,7 +31,7 @@ class SearchController {
   }
 
   /**
-   * Perform semantic search
+   * Perform search
    */
   async semanticSearch(req, res) {
     try {
@@ -44,14 +44,14 @@ class SearchController {
         });
       }
 
-      const results = await vertexAiService.semanticSearch(query, 10);
+      const results = await searchService.search(query, 10);
 
       res.json({
         success: true,
         data: results
       });
     } catch (error) {
-      console.error('Semantic search error:', error);
+      console.error('Search error:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -66,7 +66,7 @@ class SearchController {
     try {
       const { videoId } = req.params;
 
-      const similarVideos = await vertexAiService.findSimilarVideos(videoId, 5);
+      const similarVideos = await searchService.findSimilarVideos(videoId, 5);
 
       res.json({
         success: true,
