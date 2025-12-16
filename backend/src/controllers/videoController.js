@@ -1,17 +1,22 @@
 const videoService = require('../services/videoService');
 const storageService = require('../services/storageService');
+const securityService = require('../services/securityService');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
 class VideoController {
   /**
    * Upload video
    */
   async uploadVideo(req, res) {
+    let videoFile = null;
+    let thumbnailFile = null;
+    
     try {
       const { title, description, tags, isPublic } = req.body;
       const userId = req.user.id;
-      const videoFile = req.files?.video?.[0];
-      const thumbnailFile = req.files?.thumbnail?.[0];
+      videoFile = req.files?.video?.[0];
+      thumbnailFile = req.files?.thumbnail?.[0];
 
       console.log('[UPLOAD] Starting video upload');
       console.log('[UPLOAD] User ID:', userId);
@@ -25,6 +30,78 @@ class VideoController {
           message: 'Video file is required'
         });
       }
+
+      // ============================================
+      // SECURITY CHECK: Validate video file
+      // ============================================
+      console.log('[UPLOAD] Running security checks on video file...');
+      const videoSecurityCheck = await securityService.validateFileBeforeUpload(
+        videoFile.path,
+        videoFile.originalname,
+        videoFile.mimetype
+      );
+
+      if (!videoSecurityCheck.valid) {
+        console.error('[UPLOAD] Security check FAILED for video:', videoSecurityCheck.errors);
+        
+        // Clean up uploaded file
+        try {
+          fs.unlinkSync(videoFile.path);
+        } catch (e) {
+          console.warn('[UPLOAD] Could not delete rejected file');
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: 'Video file failed security checks',
+          errors: videoSecurityCheck.errors,
+          warnings: videoSecurityCheck.warnings
+        });
+      }
+
+      // Log warnings if any
+      if (videoSecurityCheck.warnings.length > 0) {
+        console.warn('[UPLOAD] Security warnings:', videoSecurityCheck.warnings);
+      }
+
+      console.log('[UPLOAD] Security check PASSED for video');
+
+      // ============================================
+      // SECURITY CHECK: Validate thumbnail file (if provided)
+      // ============================================
+      if (thumbnailFile) {
+        console.log('[UPLOAD] Running security checks on thumbnail file...');
+        const thumbnailSecurityCheck = await securityService.validateFileBeforeUpload(
+          thumbnailFile.path,
+          thumbnailFile.originalname,
+          thumbnailFile.mimetype
+        );
+
+        if (!thumbnailSecurityCheck.valid) {
+          console.error('[UPLOAD] Security check FAILED for thumbnail:', thumbnailSecurityCheck.errors);
+          
+          // Clean up uploaded files
+          try {
+            fs.unlinkSync(videoFile.path);
+            fs.unlinkSync(thumbnailFile.path);
+          } catch (e) {
+            console.warn('[UPLOAD] Could not delete rejected files');
+          }
+
+          return res.status(400).json({
+            success: false,
+            message: 'Thumbnail file failed security checks',
+            errors: thumbnailSecurityCheck.errors,
+            warnings: thumbnailSecurityCheck.warnings
+          });
+        }
+
+        console.log('[UPLOAD] Security check PASSED for thumbnail');
+      }
+
+      // ============================================
+      // All security checks passed - proceed with upload
+      // ============================================
 
       // Create video metadata
       const videoId = uuidv4();
@@ -82,6 +159,19 @@ class VideoController {
       });
     } catch (error) {
       console.error('[UPLOAD] Upload video error:', error);
+      
+      // Clean up uploaded files on error
+      try {
+        if (videoFile?.path && fs.existsSync(videoFile.path)) {
+          fs.unlinkSync(videoFile.path);
+        }
+        if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) {
+          fs.unlinkSync(thumbnailFile.path);
+        }
+      } catch (e) {
+        console.warn('[UPLOAD] Could not clean up files:', e.message);
+      }
+
       res.status(500).json({
         success: false,
         message: error.message
@@ -93,10 +183,12 @@ class VideoController {
    * Upload caption
    */
   async uploadCaption(req, res) {
+    let captionFile = null;
+    
     try {
       const { videoId, language, languageCode } = req.body;
       const userId = req.user.id;
-      const captionFile = req.files?.caption?.[0];
+      captionFile = req.files?.caption?.[0];
 
       if (!captionFile) {
         return res.status(400).json({
@@ -112,6 +204,36 @@ class VideoController {
           message: 'Unauthorized'
         });
       }
+
+      // ============================================
+      // SECURITY CHECK: Validate caption file
+      // ============================================
+      console.log('[UPLOAD] Running security checks on caption file...');
+      const captionSecurityCheck = await securityService.validateFileBeforeUpload(
+        captionFile.path,
+        captionFile.originalname,
+        captionFile.mimetype
+      );
+
+      if (!captionSecurityCheck.valid) {
+        console.error('[UPLOAD] Security check FAILED for caption:', captionSecurityCheck.errors);
+        
+        // Clean up uploaded file
+        try {
+          fs.unlinkSync(captionFile.path);
+        } catch (e) {
+          console.warn('[UPLOAD] Could not delete rejected file');
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: 'Caption file failed security checks',
+          errors: captionSecurityCheck.errors,
+          warnings: captionSecurityCheck.warnings
+        });
+      }
+
+      console.log('[UPLOAD] Security check PASSED for caption');
 
       // Upload caption file
       const captionUpload = await storageService.uploadCaption(
@@ -141,6 +263,16 @@ class VideoController {
       });
     } catch (error) {
       console.error('Upload caption error:', error);
+      
+      // Clean up uploaded file on error
+      try {
+        if (captionFile?.path && fs.existsSync(captionFile.path)) {
+          fs.unlinkSync(captionFile.path);
+        }
+      } catch (e) {
+        console.warn('[UPLOAD] Could not clean up file:', e.message);
+      }
+
       res.status(500).json({
         success: false,
         message: error.message
@@ -388,10 +520,12 @@ class VideoController {
    * Upload video chunk (for large files >30MB)
    */
   async uploadVideoChunk(req, res) {
+    let chunkFile = null;
+    
     try {
       const { uploadId, chunkIndex, totalChunks, title, description, tags, isPublic } = req.body;
       const userId = req.user.id;
-      const chunkFile = req.file;
+      chunkFile = req.file;
 
       console.log(`[CHUNK_UPLOAD] Chunk ${chunkIndex}/${totalChunks} for upload ${uploadId}`);
 
@@ -409,8 +543,37 @@ class VideoController {
         });
       }
 
+      // ============================================
+      // SECURITY CHECK: Validate chunk file
+      // ============================================
+      console.log('[CHUNK_UPLOAD] Running security checks on chunk file...');
+      const chunkSecurityCheck = await securityService.validateFileBeforeUpload(
+        chunkFile.path,
+        `chunk-${chunkIndex}`,
+        chunkFile.mimetype
+      );
+
+      if (!chunkSecurityCheck.valid) {
+        console.error('[CHUNK_UPLOAD] Security check FAILED:', chunkSecurityCheck.errors);
+        
+        // Clean up uploaded chunk
+        try {
+          fs.unlinkSync(chunkFile.path);
+        } catch (e) {
+          console.warn('[CHUNK_UPLOAD] Could not delete rejected chunk');
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: 'Chunk file failed security checks',
+          errors: chunkSecurityCheck.errors,
+          warnings: chunkSecurityCheck.warnings
+        });
+      }
+
+      console.log('[CHUNK_UPLOAD] Security check PASSED for chunk');
+
       // Create temp directory for chunks
-      const fs = require('fs');
       const path = require('path');
       const tempDir = path.join(__dirname, '../../temp-uploads', uploadId);
       if (!fs.existsSync(tempDir)) {
@@ -443,6 +606,37 @@ class VideoController {
         writeStream.on('finish', async () => {
           try {
             console.log(`[CHUNK_UPLOAD] Combined video saved to ${finalVideoPath}`);
+
+            // ============================================
+            // SECURITY CHECK: Validate final combined video
+            // ============================================
+            console.log('[CHUNK_UPLOAD] Running security checks on combined video...');
+            const combinedSecurityCheck = await securityService.validateFileBeforeUpload(
+              finalVideoPath,
+              `${title || 'untitled'}.mp4`,
+              'video/mp4'
+            );
+
+            if (!combinedSecurityCheck.valid) {
+              console.error('[CHUNK_UPLOAD] Security check FAILED for combined video:', combinedSecurityCheck.errors);
+              
+              // Clean up combined video and temp files
+              try {
+                fs.unlinkSync(finalVideoPath);
+                fs.rmSync(tempDir, { recursive: true, force: true });
+              } catch (e) {
+                console.warn('[CHUNK_UPLOAD] Could not clean up files');
+              }
+
+              return res.status(400).json({
+                success: false,
+                message: 'Combined video failed security checks',
+                errors: combinedSecurityCheck.errors,
+                warnings: combinedSecurityCheck.warnings
+              });
+            }
+
+            console.log('[CHUNK_UPLOAD] Security check PASSED for combined video');
 
             // Create video folder with title
             const folderPath = await storageService.createVideoFolder(videoId, userId, title);
