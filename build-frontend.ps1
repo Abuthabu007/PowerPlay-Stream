@@ -26,6 +26,7 @@ param(
     [string]$Version = "latest",
     [string]$ProjectId = $env:GCP_PROJECT_ID,
     [string]$Region = "us-central1",
+    [string]$RepositoryName,
     [string]$ApiUrl,
     [switch]$Push,
     [switch]$Test,
@@ -42,7 +43,7 @@ $Colors = @{
 
 function Write-Status {
     param([string]$Message, [string]$Type = 'Info')
-    $color = $Colors[$Type] ?? 'White'
+    $color = if ($Colors.ContainsKey($Type)) { $Colors[$Type] } else { 'White' }
     Write-Host $Message -ForegroundColor $color
 }
 
@@ -80,28 +81,40 @@ Write-Host ""
 Write-Host "📦 Image Configuration:" -ForegroundColor Cyan
 Write-Host "   Name: $ImageName"
 Write-Host "   Version: $Version"
-Write-Host "   API URL: $(if ($ApiUrl) { $ApiUrl } else { 'Not set (default used)' })"
-Write-Host "   GCP: $(if ($Push) { "Yes - $ProjectId/$Region" } else { 'No' })"
+if ($ApiUrl) {
+    Write-Host "   API URL: $ApiUrl"
+} else {
+    Write-Host "   API URL: Not set (default used)"
+}
+if ($Push) {
+    Write-Host "   GCP: Yes - $ProjectId/$Region"
+} else {
+    Write-Host "   GCP: No"
+}
 Write-Host ""
 
 # Build the image
 if (-not $NoBuild) {
     Write-Host "🔨 Building Docker image..." -ForegroundColor Cyan
     
-    $buildCmd = "docker build -t $($ImageName):$Version -f Dockerfile"
-    
-    # Add build arguments if API URL is provided
+    $buildCmd = "docker build -t $($ImageName):$Version -f Dockerfile --build-arg REACT_APP_API_URL="
     if ($ApiUrl) {
-        $buildCmd += " --build-arg REACT_APP_API_URL=$ApiUrl"
+        $buildCmd += "$ApiUrl"
+    } else {
+        $buildCmd += "http://localhost:5000/api"
     }
-    
     $buildCmd += " ."
     
     Write-Host "   Command: $buildCmd"
+    Write-Host "   Working directory: frontend"
     Write-Host "   This may take 2-3 minutes on first build..."
     Write-Host ""
     
+    Push-Location frontend
+    
     Invoke-Expression $buildCmd
+    
+    Pop-Location
     
     if ($LASTEXITCODE -ne 0) {
         Write-Status "❌ Build failed" Error
@@ -158,7 +171,13 @@ if ($Push) {
         exit 1
     }
     
-    $registryUrl = "$Region-docker.pkg.dev/$ProjectId/$($ImageName)"
+    if (-not $RepositoryName) {
+        Write-Status "❌ RepositoryName is required for pushing" Error
+        Write-Host "   Use -RepositoryName parameter (e.g., looply-docker-repo)"
+        exit 1
+    }
+    
+    $registryUrl = "$Region-docker.pkg.dev/$ProjectId/$RepositoryName"
     $fullImageName = "$registryUrl/$($ImageName):$Version"
     
     Write-Host "   Registry: $registryUrl"

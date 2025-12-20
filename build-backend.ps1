@@ -26,6 +26,7 @@ param(
     [string]$Version = "latest",
     [string]$ProjectId = $env:GCP_PROJECT_ID,
     [string]$Region = "us-central1",
+    [string]$RepositoryName,
     [string]$FrontendUrl,
     [switch]$Push,
     [switch]$Test,
@@ -42,7 +43,7 @@ $Colors = @{
 
 function Write-Status {
     param([string]$Message, [string]$Type = 'Info')
-    $color = $Colors[$Type] ?? 'White'
+    $color = if ($Colors.ContainsKey($Type)) { $Colors[$Type] } else { 'White' }
     Write-Host $Message -ForegroundColor $color
 }
 
@@ -78,8 +79,16 @@ Write-Host ""
 Write-Host "📦 Image Configuration:" -ForegroundColor Cyan
 Write-Host "   Name: $ImageName"
 Write-Host "   Version: $Version"
-Write-Host "   Frontend URL: $(if ($FrontendUrl) { $FrontendUrl } else { 'Not set (CORS to localhost)' })"
-Write-Host "   GCP: $(if ($Push) { "Yes - $ProjectId/$Region" } else { 'No' })"
+if ($FrontendUrl) {
+    Write-Host "   Frontend URL: $FrontendUrl"
+} else {
+    Write-Host "   Frontend URL: Not set (CORS to localhost)"
+}
+if ($Push) {
+    Write-Host "   GCP: Yes - $ProjectId/$Region"
+} else {
+    Write-Host "   GCP: No"
+}
 Write-Host ""
 
 # Build the image
@@ -166,7 +175,13 @@ if ($Push) {
         exit 1
     }
     
-    $registryUrl = "$Region-docker.pkg.dev/$ProjectId/$($ImageName)"
+    if (-not $RepositoryName) {
+        Write-Status "❌ RepositoryName is required for pushing" Error
+        Write-Host "   Use -RepositoryName parameter (e.g., looply-docker-repo)"
+        exit 1
+    }
+    
+    $registryUrl = "$Region-docker.pkg.dev/$ProjectId/$RepositoryName"
     $fullImageName = "$registryUrl/$($ImageName):$Version"
     
     Write-Host "   Registry: $registryUrl"
