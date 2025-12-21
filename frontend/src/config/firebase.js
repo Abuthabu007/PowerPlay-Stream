@@ -7,13 +7,13 @@ import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBXTUybif-6rKmSUkqcVKtInmMK-hV-o-A",
-  authDomain: "komo-infra-479911.firebaseapp.com",
-  projectId: "komo-infra-479911",
-  storageBucket: "komo-infra-479911.firebasestorage.app",
-  messagingSenderId: "868383408248",
-  appId: "1:868383408248:web:68590bfdb934a6d4cd6d8d",
-  measurementId: "G-536RT67Q2Q"
+  apiKey: "AIzaSyA4mzXLf2WS6JA2n1kQgEENBi0znnmWLx0",
+  authDomain: "looply-dev-481412.firebaseapp.com",
+  projectId: "looply-dev-481412",
+  storageBucket: "looply-dev-481412.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "G-XXXXXXXXXX"
 };
 
 // Initialize Firebase

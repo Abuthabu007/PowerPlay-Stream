@@ -31,7 +31,7 @@ function App() {
             setUser({
               id: 'dev-user',
               name: 'Development User',
-              email: 'dev@example.com',
+              email: 'ahamedbeema1989@gmail.com',
               iapId: 'dev-user'
             });
             setUserRole('admin');
