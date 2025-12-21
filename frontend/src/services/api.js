@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Determine API URL based on environment
+let API_BASE_URL = 'https://looply-backend-687745071178.us-central1.run.app/api';
+
+// Override if explicitly set
+if (process.env.REACT_APP_API_URL) {
+  API_BASE_URL = process.env.REACT_APP_API_URL;
+} else if (window.location.hostname === 'localhost') {
+  API_BASE_URL = 'http://localhost:5000/api';
+}
+
+console.log('API_BASE_URL:', API_BASE_URL);
 
 // Get IAP token from Authorization header
 const getAuthToken = () => {
