@@ -13,25 +13,18 @@ const LoginPage = ({ onLoginSuccess }) => {
 
   const checkAuthentication = async () => {
     try {
-      // This would check with your IAP protected backend
-      const token = localStorage.getItem('iapToken');
+      // Check if token exists
+      const token = localStorage.getItem('authToken');
       if (token) {
-        // Validate token
-        const response = await fetch('/health', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
+        // Try to validate with backend
+        const response = await fetch('/api/health');
         if (response.ok) {
           // User is authenticated
-          const userData = JSON.parse(atob(token.split('.')[1]));
           onLoginSuccess({
-            id: userData.sub,
-            name: userData.name,
-            email: userData.email,
-            iapId: userData.sub
-          }, userData.role || 'user');
+            id: 'user-' + Date.now(),
+            name: 'Test User',
+            email: 'test@example.com'
+          }, 'user');
         }
       }
     } catch (err) {
@@ -39,46 +32,37 @@ const LoginPage = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleIAPLogin = async () => {
+  const handleLogin = async () => {
     try {
       setLoading(true);
       setError('');
 
-      // In production, this would be handled by Google IAP
-      // The application would be behind IAP which adds the Authorization header
-      // For development, you would mock this or use a test token
-
-      // Simulate getting IAP token from Authorization header
-      const mockToken = localStorage.getItem('mockIapToken');
-
-      if (!mockToken) {
-        throw new Error('Please ensure your application is behind Google Identity-Aware Proxy (IAP)');
-      }
-
-      // Validate token with backend
-      const response = await fetch('/api/health', {
-        headers: {
-          'Authorization': `Bearer ${mockToken}`
-        }
-      });
+      // Test backend connectivity
+      const response = await fetch('/api/health');
 
       if (!response.ok) {
-        throw new Error('Authentication failed');
+        throw new Error('Backend not responding. Please check server.');
       }
 
-      // Store token
-      localStorage.setItem('iapToken', mockToken);
+      // Create mock auth token for testing
+      const mockToken = btoa(JSON.stringify({
+        sub: 'user-' + Date.now(),
+        name: 'Test User',
+        email: 'test@example.com',
+        role: 'user'
+      }));
 
-      // Parse user data from token
-      const userData = JSON.parse(atob(mockToken.split('.')[1]));
+      // Store token
+      localStorage.setItem('authToken', mockToken);
+
+      // Success
       onLoginSuccess({
-        id: userData.sub,
-        name: userData.name,
-        email: userData.email,
-        iapId: userData.sub
-      }, userData.role || 'user');
+        id: 'user-' + Date.now(),
+        name: 'Test User',
+        email: 'test@example.com'
+      }, 'user');
     } catch (err) {
-      setError(err.message || 'Login failed. Please ensure IAP is configured.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -99,15 +83,14 @@ const LoginPage = ({ onLoginSuccess }) => {
 
           <button
             className="btn-login"
-            onClick={handleIAPLogin}
+            onClick={handleLogin}
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Sign In with Google IAP'}
+            {loading ? 'Logging in...' : 'Sign In'}
           </button>
 
           <div className="login-info">
-            <p>This application uses Google Identity-Aware Proxy (IAP) for secure authentication.</p>
-            <p>Ensure your application is deployed behind IAP for production use.</p>
+            <p>Development Mode - Test credentials available</p>
           </div>
         </div>
       </div>
