@@ -22,19 +22,27 @@ console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set (development)'
 const allowedOrigins = [
   'http://localhost:3000',           // Local development
   'http://localhost:8080',           // Docker local
-  process.env.FRONTEND_URL           // Production frontend URL (e.g., https://frontend-xxxxx.a.run.app)
+  'https://looply-frontend-687745071178.us-central1.run.app',  // Production frontend
+  process.env.FRONTEND_URL           // Production frontend URL from env var
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      console.warn(`Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('CORS not allowed'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
