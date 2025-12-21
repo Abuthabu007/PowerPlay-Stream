@@ -75,7 +75,7 @@ app.get('/api/user-info', iapAuth, (req, res) => {
 
 // Serve index.html for all non-API routes (SPA support)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  res.sendFile(path.join(process.env.PUBLIC_PATH, 'index.html'));
 });
 
 
