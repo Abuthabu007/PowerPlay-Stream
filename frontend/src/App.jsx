@@ -27,14 +27,14 @@ function App() {
             });
             setUserRole(userData.role || 'user');
           } else {
-            // Dev mode - auto-authenticate
+            // Dev mode - auto-authenticate with consistent user ID
             setUser({
-              id: 'dev-user',
+              id: 'dev-user-123',
               name: 'Development User',
               email: 'ahamedbeema1989@gmail.com',
               iapId: 'dev-user'
             });
-            setUserRole('admin');
+            setUserRole('superadmin');
           }
         }
       } catch (err) {

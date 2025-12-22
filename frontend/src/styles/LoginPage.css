@@ -52,10 +52,12 @@
 }
 
 .error-message {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
-  padding: 12px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%);
+  color: #DC2626;
+  padding: 14px 16px;
+  border-radius: 8px;
   margin-bottom: 20px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 2px solid #DC2626;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }

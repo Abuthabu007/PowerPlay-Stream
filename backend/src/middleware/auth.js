@@ -82,9 +82,9 @@ const iapAuth = async (req, res, next) => {
     if (process.env.DISABLE_IAP_VALIDATION === 'true') {
       console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
       
-      // Dev user mock (no DB) - with proper userId
+      // Dev user mock (no DB) - with consistent userId for development
       req.user = {
-        id: 'dev-user-' + Date.now(),
+        id: 'dev-user-123',
         email: 'dev@example.com',
         name: 'Development User',
         iapId: 'dev-user',

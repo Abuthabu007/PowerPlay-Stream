@@ -92,6 +92,11 @@ export const videoAPI = {
   // Permanent delete video
   permanentDelete: (videoId) => {
     return apiClient.delete(`/videos/${videoId}/permanent`);
+  },
+
+  // Update video metadata
+  updateVideo: (videoId, data) => {
+    return apiClient.patch(`/videos/${videoId}`, data);
   }
 };
 

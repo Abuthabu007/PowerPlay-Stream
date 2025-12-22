@@ -51,6 +51,20 @@ class SecurityService {
       // Scripts
       'SHEBANG': { hex: '23212f', desc: 'Shell script' }
     };
+
+    // Valid signatures for allowed files (magic bytes for verification)
+    this.validSignatures = {
+      // Video formats
+      'MP4': { hex: '00000020667479', desc: 'MP4 video' },
+      'WEBM': { hex: '1a45dfa3', desc: 'WebM video' },
+      'FLV': { hex: '464c5601', desc: 'FLV video' },
+      'MOV': { hex: '00000018667479', desc: 'MOV video' },
+      // Image formats
+      'JPEG': { hex: 'ffd8ff', desc: 'JPEG image' },
+      'PNG': { hex: '89504e47', desc: 'PNG image' },
+      'GIF': { hex: '474946', desc: 'GIF image' },
+      'WEBP': { hex: '52494646', desc: 'WebP image' }
+    };
   }
 
   /**
@@ -98,7 +112,7 @@ class SecurityService {
 
       // 3. Check file signature (magic bytes)
       try {
-        const signatureCheck = await this.checkFileSignature(filePath);
+        const signatureCheck = await this.checkFileSignature(filePath, mimeType);
         results.checks.fileSignature = true;
         if (!signatureCheck.valid) {
           results.valid = false;
@@ -207,7 +221,7 @@ class SecurityService {
   /**
    * Check file signature (magic bytes) for dangerous content
    */
-  async checkFileSignature(filePath) {
+  async checkFileSignature(filePath, mimeType = '') {
     try {
       const buffer = Buffer.alloc(512);
       const fd = fs.openSync(filePath, 'r');
@@ -215,10 +229,39 @@ class SecurityService {
       fs.closeSync(fd);
 
       const hexStart = buffer.toString('hex', 0, 8).toUpperCase();
+      const hex3Start = buffer.toString('hex', 0, 3).toUpperCase();
+      const hex4Start = buffer.toString('hex', 0, 4).toUpperCase();
+
+      console.log('[SECURITY] File signature check - MIME:', mimeType, 'Hex:', hexStart.substring(0, 16));
+
+      // For images, validate against known valid signatures
+      if (mimeType && mimeType.startsWith('image/')) {
+        // Check for valid image signatures
+        let isValidImage = false;
+        if (hex3Start === 'FFD8FF') { // JPEG
+          isValidImage = true;
+          console.log('[SECURITY] Valid JPEG signature detected');
+        } else if (hex4Start === '89504E47') { // PNG
+          isValidImage = true;
+          console.log('[SECURITY] Valid PNG signature detected');
+        } else if (hex3Start === '474946') { // GIF
+          isValidImage = true;
+          console.log('[SECURITY] Valid GIF signature detected');
+        } else if (hexStart.startsWith('52494646')) { // WebP
+          isValidImage = true;
+          console.log('[SECURITY] Valid WebP signature detected');
+        }
+
+        if (!isValidImage) {
+          console.warn('[SECURITY] Image file has unknown signature:', hex4Start);
+          // For images, we're more lenient - as long as it's not dangerous, it's OK
+        }
+      }
 
       // Check for dangerous signatures
       for (const [name, sig] of Object.entries(this.dangerousSignatures)) {
         if (hexStart.startsWith(sig.hex)) {
+          console.error('[SECURITY] Dangerous signature found:', name);
           return {
             valid: false,
             error: `Dangerous file signature detected: ${sig.desc}. This file may be malicious.`
@@ -231,12 +274,14 @@ class SecurityService {
       if (textStart.includes('<?php') || textStart.includes('<%') || 
           textStart.includes('<script') || textStart.includes('bash') ||
           textStart.includes('python') || textStart.includes('import os')) {
+        console.error('[SECURITY] Suspicious code patterns detected');
         return {
           valid: false,
           error: 'Suspicious code detected in file. File may contain malicious content.'
         };
       }
 
+      console.log('[SECURITY] File signature validation passed');
       return {
         valid: true,
         signature: hexStart.substring(0, 16)

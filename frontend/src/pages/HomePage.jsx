@@ -46,6 +46,13 @@ const HomePage = ({ user, userRole }) => {
   const handleSearch = async (query) => {
     try {
       setSearchQuery(query);
+      
+      // If search query is empty, show all videos
+      if (!query || query.trim().length === 0) {
+        setFilteredVideos([]);
+        return;
+      }
+
       setLoading(true);
       const response = await searchAPI.semanticSearch(query);
       setFilteredVideos(response.data.data || []);
@@ -92,6 +99,23 @@ const HomePage = ({ user, userRole }) => {
       alert(response.data.message || 'Video deleted successfully');
     } catch (err) {
       setError('Delete failed: ' + err.message);
+    }
+  };
+
+  const handleEdit = async (videoId, updatedData) => {
+    try {
+      const response = await videoAPI.updateVideo(videoId, updatedData);
+      
+      // Update video in state
+      const updatedVideo = response.data.data;
+      const newVideos = videos.map(v => v.id === videoId ? updatedVideo : v);
+      setVideos(newVideos);
+      setFilteredVideos(filteredVideos.map(v => v.id === videoId ? updatedVideo : v));
+
+      // Show success message
+      alert('Video updated successfully');
+    } catch (err) {
+      setError('Update failed: ' + err.message);
     }
   };
 
@@ -197,6 +221,7 @@ const HomePage = ({ user, userRole }) => {
                 onPlay={handlePlay}
                 onDownload={handleDownload}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
                 onPrivacy={handlePrivacy}
                 currentUserId={user?.id}
                 userRole={userRole}

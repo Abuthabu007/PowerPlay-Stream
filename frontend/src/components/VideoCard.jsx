@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+import EditVideoModal from './EditVideoModal';
 import '../styles/VideoCard.css';
 
-const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUserId, userRole }) => {
+const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, onEdit, currentUserId, userRole }) => {
   const isOwner = video.userId === currentUserId;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
@@ -28,6 +30,19 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
     setShowDeleteModal(false);
   };
 
+  const handleEditClick = () => {
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = (updatedData) => {
+    setShowEditModal(false);
+    onEdit(video.id, updatedData);
+  };
+
+  const handleEditCancel = () => {
+    setShowEditModal(false);
+  };
+
   return (
     <div className="video-card">
       {showDeleteModal && (
@@ -36,6 +51,14 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
           onSoftDelete={handleSoftDelete}
           onPermanentDelete={handlePermanentDelete}
           onCancel={handleCancelDelete}
+        />
+      )}
+
+      {showEditModal && (
+        <EditVideoModal
+          video={video}
+          onSave={handleEditSave}
+          onCancel={handleEditCancel}
         />
       )}
 
@@ -87,6 +110,14 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
 
           {isOwner && (
             <>
+              <button 
+                className="btn-action btn-edit"
+                onClick={handleEditClick}
+                title="Edit video details"
+              >
+                ✏️ Edit
+              </button>
+
               <button 
                 className="btn-action btn-delete"
                 onClick={handleDeleteClick}
