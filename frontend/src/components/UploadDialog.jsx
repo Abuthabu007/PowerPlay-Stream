@@ -2,6 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import '../styles/UploadDialog.css';
 
+// Backend API URL
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://looply-backend-687745071178.us-central1.run.app';
+
 // Separate component for caption dropzones to avoid hook calls in loops
 const CaptionDropzone = ({ language, label, onDrop, captionAdded }) => {
   const { getRootProps, getInputProps } = useDropzone({
@@ -124,10 +129,18 @@ const UploadDialog = ({ onClose, onSuccess }) => {
         uploadFormData.append('thumbnail', thumbnail);
       }
 
+      // Get token from localStorage
+      const token = localStorage.getItem('iapToken');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       // Submit form data
-      const response = await fetch('/api/videos/upload', {
+      const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
         method: 'POST',
-        body: uploadFormData
+        body: uploadFormData,
+        headers: headers
       });
 
       if (!response.ok) {

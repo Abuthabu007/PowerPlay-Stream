@@ -63,6 +63,19 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    service: 'PowerPlay Stream Backend API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: 'GET /health',
+      videos: 'GET /api/videos/*'
+    }
+  });
+});
+
 
 // Get IAP user info (to be refactored for Firestore-based user info)
 app.get('/api/user-info', iapAuth, (req, res) => {
@@ -81,11 +94,15 @@ app.get('/api/user-info', iapAuth, (req, res) => {
   }
 });
 
-// Serve index.html for all non-API routes (SPA support)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(process.env.PUBLIC_PATH, 'index.html'));
+// 404 handler for API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'API endpoint not found',
+    path: req.path,
+    method: req.method
+  });
 });
-
 
 // Error handler
 app.use(errorHandler);
