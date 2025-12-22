@@ -50,6 +50,9 @@ router.post('/:videoId/caption',
 // Get User's Videos
 router.get('/my-videos', videoController.getUserVideos);
 
+// Migrate Video UserIDs (one-time fix)
+router.post('/admin/migrate-user-ids', videoController.migrateVideoUserIds);
+
 /**
  * PARAMETERIZED ROUTES (these come LAST to avoid conflicts)
  */

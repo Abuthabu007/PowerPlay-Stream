@@ -7,6 +7,16 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, onEdit, cur
   const isOwner = video.userId === currentUserId;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Debug logging
+  console.log('[VideoCard] Video:', { 
+    id: video.id, 
+    title: video.title,
+    userId: video.userId, 
+    currentUserId, 
+    isOwner,
+    videoObject: video 
+  });
   
   const handleDeleteClick = () => {
     setShowDeleteModal(true);

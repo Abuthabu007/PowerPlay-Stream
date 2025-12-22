@@ -29,10 +29,10 @@ function App() {
           } else {
             // Dev mode - auto-authenticate with consistent user ID
             setUser({
-              id: 'Abuthabu A',
+              id: 'dev-user-123',
               name: 'Development User',
               email: 'ahamedbeema1989@gmail.com',
-              iapId: 'dev-user'
+              iapId: 'dev-user-123'
             });
             setUserRole('superadmin');
           }

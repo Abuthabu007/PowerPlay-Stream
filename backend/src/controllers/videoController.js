@@ -757,6 +757,55 @@ class VideoController {
       });
     }
   }
+
+  /**
+   * Migrate all videos to use consistent userId
+   * This is a one-time operation to fix userId consistency issues
+   */
+  async migrateVideoUserIds(req, res) {
+    try {
+      const Video = require('../models/Video');
+      const targetUserId = 'dev-user-123';
+
+      // Get all videos (including deleted ones temporarily)
+      const videos = await Video.findAll({
+        where: {
+          isDeleted: false
+        }
+      });
+
+      console.log(`[MIGRATION] Found ${videos.length} videos to migrate`);
+
+      // Update all videos to have the target userId
+      let updatedCount = 0;
+      for (const video of videos) {
+        if (video.userId !== targetUserId) {
+          await Video.update(
+            { userId: targetUserId },
+            { where: { id: video.id } }
+          );
+          updatedCount++;
+          console.log(`[MIGRATION] Updated video ${video.id}: ${video.userId} -> ${targetUserId}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Migration complete: ${updatedCount} videos updated to userId=${targetUserId}`,
+        data: {
+          totalVideos: videos.length,
+          updatedVideos: updatedCount,
+          targetUserId
+        }
+      });
+    } catch (error) {
+      console.error('[MIGRATION] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new VideoController();

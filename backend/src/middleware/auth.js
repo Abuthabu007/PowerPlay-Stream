@@ -149,6 +149,7 @@ const iapAuth = async (req, res, next) => {
 
     // Set user info from JWT (no DB)
     req.user = {
+      id: 'dev-user-123',
       email: userEmail,
       name: decoded.name || userEmail,
       iapId: decoded.sub,
