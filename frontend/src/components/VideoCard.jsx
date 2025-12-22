@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 import '../styles/VideoCard.css';
 
 const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUserId, userRole }) => {
   const isOwner = video.userId === currentUserId;
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${video.title}"?`)) {
-      onDelete(video.id, 'soft');
-    }
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleSoftDelete = () => {
+    setShowDeleteModal(false);
+    onDelete(video.id, 'soft');
   };
 
   const handlePermanentDelete = () => {
@@ -15,14 +20,25 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
       alert('Only superadmin can permanently delete videos');
       return;
     }
+    setShowDeleteModal(false);
+    onDelete(video.id, 'permanent');
+  };
 
-    if (window.confirm(`Permanently delete "${video.title}"? This action cannot be undone.`)) {
-      onDelete(video.id, 'permanent');
-    }
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
   };
 
   return (
     <div className="video-card">
+      {showDeleteModal && (
+        <DeleteConfirmationModal
+          videoTitle={video.title}
+          onSoftDelete={handleSoftDelete}
+          onPermanentDelete={handlePermanentDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
+
       <div className="video-thumbnail">
         <img 
           src={video.thumbnailUrl || 'https://via.placeholder.com/300x200?text=No+Thumbnail'} 
@@ -72,17 +88,9 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
           {isOwner && (
             <>
               <button 
-                className="btn-action btn-privacy"
-                onClick={() => onPrivacy(video.id)}
-                title={video.isPublic ? 'Make private' : 'Make public'}
-              >
-                {video.isPublic ? '🔓 Public' : '🔒 Private'}
-              </button>
-
-              <button 
                 className="btn-action btn-delete"
-                onClick={handleDelete}
-                title="Soft delete (remove from listing)"
+                onClick={handleDeleteClick}
+                title="Delete video"
               >
                 🗑 Delete
               </button>
@@ -90,10 +98,10 @@ const VideoCard = ({ video, onPlay, onDownload, onDelete, onPrivacy, currentUser
               {userRole === 'superadmin' && (
                 <button 
                   className="btn-action btn-delete-permanent"
-                  onClick={handlePermanentDelete}
-                  title="Permanent delete (cannot be undone)"
+                  onClick={handleDeleteClick}
+                  title="Delete video (show options)"
                 >
-                  ⚠ Permanent Delete
+                  ⚠ More Options
                 </button>
               )}
             </>
