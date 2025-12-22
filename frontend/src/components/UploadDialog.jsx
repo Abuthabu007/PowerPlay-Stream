@@ -131,16 +131,15 @@ const UploadDialog = ({ onClose, onSuccess }) => {
 
       // Get token from localStorage
       const token = localStorage.getItem('iapToken');
-      const headers = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      // Submit form data
+      
+      // Submit form data with proper CORS headers
       const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
         method: 'POST',
         body: uploadFormData,
-        headers: headers
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        credentials: 'omit' // Don't send cookies, we're using Authorization header
       });
 
       if (!response.ok) {

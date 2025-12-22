@@ -73,12 +73,18 @@ async function verifyIAPToken(token, expectedAudience) {
  */
 const iapAuth = async (req, res, next) => {
   try {
+    // Allow CORS preflight requests (OPTIONS) to pass through
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
     // Allow bypassing IAP validation for local development
     if (process.env.DISABLE_IAP_VALIDATION === 'true') {
       console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
       
-      // Dev user mock (no DB)
+      // Dev user mock (no DB) - with proper userId
       req.user = {
+        id: 'dev-user-' + Date.now(),
         email: 'dev@example.com',
         name: 'Development User',
         iapId: 'dev-user',

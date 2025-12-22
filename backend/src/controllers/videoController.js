@@ -293,9 +293,28 @@ class VideoController {
         offset: parseInt(offset)
       });
 
+      // Generate signed URLs for all videos
+      const videosWithSignedUrls = await Promise.all(
+        videos.map(async (video) => {
+          if (video && video.cloudStoragePath) {
+            try {
+              const signedUrl = await storageService.getSignedDownloadUrl(
+                video.cloudStoragePath,
+                60 // 60 minutes expiration
+              );
+              video.videoUrl = signedUrl;
+            } catch (signedUrlError) {
+              console.warn('[VIDEO] Could not generate signed URL:', signedUrlError.message);
+              // Fall back to stored URL if signing fails
+            }
+          }
+          return video;
+        })
+      );
+
       res.json({
         success: true,
-        data: videos
+        data: videosWithSignedUrls
       });
     } catch (error) {
       console.error('Get user videos error:', error);
@@ -318,9 +337,28 @@ class VideoController {
         offset: parseInt(offset)
       });
 
+      // Generate signed URLs for all videos
+      const videosWithSignedUrls = await Promise.all(
+        videos.map(async (video) => {
+          if (video && video.cloudStoragePath) {
+            try {
+              const signedUrl = await storageService.getSignedDownloadUrl(
+                video.cloudStoragePath,
+                60 // 60 minutes expiration
+              );
+              video.videoUrl = signedUrl;
+            } catch (signedUrlError) {
+              console.warn('[VIDEO] Could not generate signed URL:', signedUrlError.message);
+              // Fall back to stored URL if signing fails
+            }
+          }
+          return video;
+        })
+      );
+
       res.json({
         success: true,
-        data: videos
+        data: videosWithSignedUrls
       });
     } catch (error) {
       console.error('Get public videos error:', error);
@@ -339,6 +377,21 @@ class VideoController {
       const { videoId } = req.params;
 
       const video = await videoService.getVideo(videoId);
+
+      // Generate signed URL for video file if available
+      if (video && video.cloudStoragePath) {
+        try {
+          const signedUrl = await storageService.getSignedDownloadUrl(
+            video.cloudStoragePath,
+            60 // 60 minutes expiration
+          );
+          video.videoUrl = signedUrl;
+          console.log('[VIDEO] Generated signed URL for video:', videoId);
+        } catch (signedUrlError) {
+          console.warn('[VIDEO] Could not generate signed URL:', signedUrlError.message);
+          // Fall back to stored URL if signing fails
+        }
+      }
 
       // Increment view count
       await videoService.incrementViewCount(videoId);

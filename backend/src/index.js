@@ -6,6 +6,7 @@ const path = require('path');
 const errorHandler = require('./middleware/errorHandler');
 const { iapAuth } = require('./middleware/auth');
 const videoRoutes = require('./routes/videoRoutes');
+const searchRoutes = require('./routes/searchRoutes');
 
 dotenv.config();
 
@@ -22,8 +23,10 @@ console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set (development)'
 const allowedOrigins = [
   'http://localhost:3000',           // Local development
   'http://localhost:8080',           // Docker local
-  'https://looply-frontend-687745071178.us-central1.run.app',  // Production frontend
-  process.env.FRONTEND_URL           // Production frontend URL from env var
+  'https://looply-frontend-687745071178.us-central1.run.app',  // Production frontend Cloud Run
+  'https://looply.co.in',             // Custom domain
+  'https://www.looply.co.in',         // Custom domain www
+  process.env.FRONTEND_URL            // Production frontend URL from env var
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
@@ -38,12 +41,16 @@ const corsOptions = {
     } else {
       console.warn(`CORS blocked request from origin: ${origin}`);
       console.warn(`Allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error('CORS not allowed'));
+      callback(null, false);
     }
   },
-  credentials: true,
+  credentials: 'include',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Content-Length'],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 };
 
 // Middleware
@@ -51,11 +58,15 @@ app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use(cors(corsOptions));
 
+// Explicitly handle preflight requests
+app.options('*', cors(corsOptions));
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/videos', videoRoutes);
+app.use('/api/search', searchRoutes);
 
 
 // Health check - simple and fast

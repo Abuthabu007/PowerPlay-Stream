@@ -179,16 +179,29 @@ class StorageService {
         // The backend serves these files via express.static
         return `/uploads/${filePath}`;
       } else {
-        const file = bucket.file(filePath);
-        const [url] = await file.getSignedUrl({
-          version: 'v4',
-          action: 'read',
-          expires: Date.now() + expirationMinutes * 60 * 1000
-        });
-        return url;
+        try {
+          const file = bucket.file(filePath);
+          const [url] = await file.getSignedUrl({
+            version: 'v4',
+            action: 'read',
+            expires: Date.now() + expirationMinutes * 60 * 1000
+          });
+          return url;
+        } catch (signingError) {
+          // If signing fails (permission issues), fall back to public URL
+          // In production, ensure service account has iam.serviceAccountTokenCreator role
+          console.warn('[STORAGE] Signed URL generation failed, using public URL fallback:', signingError.message);
+          
+          // Return a public URL as fallback (requires bucket to be publicly readable)
+          // For better security, make the bucket public or fix the IAM permissions
+          const bucketName = bucket.name;
+          const publicUrl = `https://storage.googleapis.com/${bucketName}/${filePath}`;
+          console.log('[STORAGE] Using public URL fallback:', publicUrl);
+          return publicUrl;
+        }
       }
     } catch (error) {
-      console.error('Signed URL error:', error);
+      console.error('Download URL error:', error);
       throw error;
     }
   }
