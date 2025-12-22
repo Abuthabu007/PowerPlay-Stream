@@ -97,6 +97,13 @@ export const videoAPI = {
   // Update video metadata
   updateVideo: (videoId, data) => {
     return apiClient.patch(`/videos/${videoId}`, data);
+  },
+
+  // Update video with files (thumbnail and/or video file)
+  updateVideoWithFiles: (videoId, formData) => {
+    return apiClient.patch(`/videos/${videoId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   }
 };
 

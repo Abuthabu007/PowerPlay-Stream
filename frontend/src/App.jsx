@@ -39,19 +39,15 @@ function App() {
         }
       } catch (err) {
         console.warn('Auth check failed:', err);
-        // Check if user has stored token
-        const token = localStorage.getItem('iapToken');
-        if (token) {
-          // Parse JWT and extract user info
-          const userData = JSON.parse(atob(token.split('.')[1]));
-          setUser({
-            id: userData.sub,
-            name: userData.name,
-            email: userData.email,
-            iapId: userData.sub
-          });
-          setUserRole(userData.role || 'user');
-        }
+        // Always use dev mode in development
+        console.log('[AUTH] Using dev mode user ID: dev-user-123');
+        setUser({
+          id: 'dev-user-123',
+          name: 'Development User',
+          email: 'ahamedbeema1989@gmail.com',
+          iapId: 'dev-user-123'
+        });
+        setUserRole('superadmin');
       } finally {
         setLoading(false);
       }

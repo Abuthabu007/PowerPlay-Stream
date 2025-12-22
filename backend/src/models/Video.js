@@ -134,7 +134,10 @@ const Video = {
     };
     
     await docRef.update(updateData);
-    return { id: videoId, ...updateData };
+    
+    // Return the complete updated document
+    const updatedDoc = await docRef.get();
+    return { id: videoId, ...updatedDoc.data() };
   },
 
   /**

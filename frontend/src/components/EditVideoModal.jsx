@@ -9,6 +9,16 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
     isPublic: video.isPublic !== false
   });
 
+  const [files, setFiles] = useState({
+    thumbnail: null,
+    video: null
+  });
+
+  const [filePreviews, setFilePreviews] = useState({
+    thumbnail: video.thumbnailUrl || null,
+    video: null
+  });
+
   const [saving, setSaving] = useState(false);
 
   const handleInputChange = (e) => {
@@ -17,6 +27,28 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleFileChange = (e, fileType) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFiles(prev => ({
+        ...prev,
+        [fileType]: file
+      }));
+
+      // Create preview
+      if (fileType === 'thumbnail') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setFilePreviews(prev => ({
+            ...prev,
+            thumbnail: event.target.result
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -37,7 +69,9 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
           .split(',')
           .map(tag => tag.trim())
           .filter(tag => tag.length > 0),
-        isPublic: formData.isPublic
+        isPublic: formData.isPublic,
+        thumbnail: files.thumbnail,
+        videoFile: files.video
       };
 
       onSave(updatedData);
@@ -90,6 +124,52 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
               onChange={handleInputChange}
               placeholder="e.g. nature, scenic, travel"
             />
+          </div>
+
+          <div className="form-section">
+            <label htmlFor="thumbnail-upload">Change Thumbnail (Optional)</label>
+            <div className="file-upload-section">
+              {filePreviews.thumbnail && (
+                <div className="thumbnail-preview">
+                  <img src={filePreviews.thumbnail} alt="Thumbnail preview" />
+                  <small>{files.thumbnail ? 'New thumbnail' : 'Current thumbnail'}</small>
+                </div>
+              )}
+              <input
+                type="file"
+                id="thumbnail-upload"
+                name="thumbnail"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, 'thumbnail')}
+                className="file-input"
+              />
+              <label htmlFor="thumbnail-upload" className="file-input-label">
+                📸 Choose Thumbnail Image
+              </label>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <label htmlFor="video-upload">Replace Video (Optional)</label>
+            <div className="file-upload-section">
+              {files.video && (
+                <div className="video-file-info">
+                  <p>📹 {files.video.name}</p>
+                  <small>{(files.video.size / (1024 * 1024)).toFixed(2)} MB</small>
+                </div>
+              )}
+              <input
+                type="file"
+                id="video-upload"
+                name="videoFile"
+                accept="video/*"
+                onChange={(e) => handleFileChange(e, 'video')}
+                className="file-input"
+              />
+              <label htmlFor="video-upload" className="file-input-label">
+                🎬 Choose Video File
+              </label>
+            </div>
           </div>
 
           <div className="form-section checkbox">

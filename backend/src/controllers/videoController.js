@@ -439,6 +439,154 @@ class VideoController {
   }
 
   /**
+   * Update video metadata and files
+   */
+  async updateVideo(req, res) {
+    let thumbnailFile = null;
+    let videoFile = null;
+    
+    try {
+      const { videoId } = req.params;
+      const userId = req.user.id;
+      const { title, description, tags, isPublic } = req.body;
+
+      // Get existing video
+      const video = await videoService.getVideo(videoId);
+      if (!video || video.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized to update this video'
+        });
+      }
+
+      console.log('[UPDATE] Updating video:', videoId);
+
+      // Prepare update data
+      const updateData = {
+        title: title || video.title,
+        description: description !== undefined ? description : video.description,
+        tags: tags ? (Array.isArray(tags) ? tags : JSON.parse(tags)) : video.tags,
+        isPublic: isPublic !== undefined ? (isPublic === 'true' || isPublic === true) : video.isPublic
+      };
+
+      // Handle thumbnail file if provided
+      if (req.files?.thumbnail) {
+        thumbnailFile = req.files.thumbnail[0];
+        console.log('[UPDATE] Validating thumbnail file...');
+        
+        const thumbnailSecurityCheck = await securityService.validateFileBeforeUpload(
+          thumbnailFile.path,
+          thumbnailFile.originalname,
+          thumbnailFile.mimetype
+        );
+
+        if (!thumbnailSecurityCheck.valid) {
+          console.error('[UPDATE] Thumbnail security check FAILED:', thumbnailSecurityCheck.errors);
+          try {
+            fs.unlinkSync(thumbnailFile.path);
+          } catch (e) {
+            console.warn('[UPDATE] Could not delete rejected thumbnail');
+          }
+
+          return res.status(400).json({
+            success: false,
+            message: 'Thumbnail file failed security checks',
+            errors: thumbnailSecurityCheck.errors
+          });
+        }
+
+        // Upload new thumbnail
+        const thumbnailUpload = await storageService.uploadThumbnail(
+          videoId,
+          userId,
+          thumbnailFile.path
+        );
+        updateData.thumbnailUrl = thumbnailUpload.publicUrl;
+        console.log('[UPDATE] Thumbnail updated');
+      }
+
+      // Handle video file if provided
+      if (req.files?.video) {
+        videoFile = req.files.video[0];
+        console.log('[UPDATE] Validating video file...');
+        
+        const videoSecurityCheck = await securityService.validateFileBeforeUpload(
+          videoFile.path,
+          videoFile.originalname,
+          videoFile.mimetype
+        );
+
+        if (!videoSecurityCheck.valid) {
+          console.error('[UPDATE] Video security check FAILED:', videoSecurityCheck.errors);
+          try {
+            fs.unlinkSync(videoFile.path);
+          } catch (e) {
+            console.warn('[UPDATE] Could not delete rejected video');
+          }
+
+          return res.status(400).json({
+            success: false,
+            message: 'Video file failed security checks',
+            errors: videoSecurityCheck.errors
+          });
+        }
+
+        // Upload new video file
+        const videoUpload = await storageService.uploadVideo(
+          videoId,
+          userId,
+          videoFile.path,
+          videoFile.originalname
+        );
+        updateData.videoUrl = videoUpload.publicUrl;
+        updateData.cloudStoragePath = videoUpload.path;
+        console.log('[UPDATE] Video file updated');
+      }
+
+      // Update video in database
+      const updatedVideo = await videoService.updateVideo(videoId, userId, updateData);
+
+      // Generate signed URL if available
+      if (updatedVideo && updatedVideo.cloudStoragePath) {
+        try {
+          const signedUrl = await storageService.getSignedDownloadUrl(
+            updatedVideo.cloudStoragePath,
+            60
+          );
+          updatedVideo.videoUrl = signedUrl;
+        } catch (signedUrlError) {
+          console.warn('[UPDATE] Could not generate signed URL:', signedUrlError.message);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Video updated successfully',
+        data: updatedVideo
+      });
+    } catch (error) {
+      console.error('[UPDATE] Error:', error);
+      
+      // Clean up uploaded files on error
+      try {
+        if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) {
+          fs.unlinkSync(thumbnailFile.path);
+        }
+        if (videoFile?.path && fs.existsSync(videoFile.path)) {
+          fs.unlinkSync(videoFile.path);
+        }
+      } catch (e) {
+        console.warn('[UPDATE] Could not clean up files');
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
    * Mark video as downloaded/undownloaded
    */
   async toggleDownloaded(req, res) {

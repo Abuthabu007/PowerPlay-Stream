@@ -104,16 +104,36 @@ const HomePage = ({ user, userRole }) => {
 
   const handleEdit = async (videoId, updatedData) => {
     try {
-      const response = await videoAPI.updateVideo(videoId, updatedData);
-      
-      // Update video in state
-      const updatedVideo = response.data.data;
-      const newVideos = videos.map(v => v.id === videoId ? updatedVideo : v);
-      setVideos(newVideos);
-      setFilteredVideos(filteredVideos.map(v => v.id === videoId ? updatedVideo : v));
+      // If files are included, use FormData
+      if (updatedData.thumbnail || updatedData.videoFile) {
+        const formData = new FormData();
+        formData.append('title', updatedData.title);
+        formData.append('description', updatedData.description);
+        formData.append('isPublic', updatedData.isPublic);
+        formData.append('tags', JSON.stringify(updatedData.tags));
+        
+        if (updatedData.thumbnail) {
+          formData.append('thumbnail', updatedData.thumbnail);
+        }
+        if (updatedData.videoFile) {
+          formData.append('video', updatedData.videoFile);
+        }
 
-      // Show success message
-      alert('Video updated successfully');
+        const response = await videoAPI.updateVideoWithFiles(videoId, formData);
+        const updatedVideo = response.data.data;
+        const newVideos = videos.map(v => v.id === videoId ? updatedVideo : v);
+        setVideos(newVideos);
+        setFilteredVideos(filteredVideos.map(v => v.id === videoId ? updatedVideo : v));
+        alert('Video updated successfully');
+      } else {
+        // No files, just update metadata
+        const response = await videoAPI.updateVideo(videoId, updatedData);
+        const updatedVideo = response.data.data;
+        const newVideos = videos.map(v => v.id === videoId ? updatedVideo : v);
+        setVideos(newVideos);
+        setFilteredVideos(filteredVideos.map(v => v.id === videoId ? updatedVideo : v));
+        alert('Video updated successfully');
+      }
     } catch (err) {
       setError('Update failed: ' + err.message);
     }

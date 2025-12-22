@@ -53,6 +53,12 @@ router.get('/my-videos', videoController.getUserVideos);
 // Migrate Video UserIDs (one-time fix)
 router.post('/admin/migrate-user-ids', videoController.migrateVideoUserIds);
 
+// Update Video (metadata and files)
+router.patch('/:videoId',
+  upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'video', maxCount: 1 }]),
+  videoController.updateVideo
+);
+
 /**
  * PARAMETERIZED ROUTES (these come LAST to avoid conflicts)
  */
