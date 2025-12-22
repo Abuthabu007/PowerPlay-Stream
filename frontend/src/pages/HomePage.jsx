@@ -170,7 +170,10 @@ const HomePage = ({ user, userRole }) => {
     <div className="home-page">
       <header className="app-header">
         <div className="header-content">
-          <h1>🎬 PowerPlay Stream</h1>
+          <div className="logo-section">
+            <img src="/logo.svg" alt="Looply Logo" className="app-logo" />
+            <h1>Looply</h1>
+          </div>
           <div className="header-actions">
             <span className="user-info">👤 {user?.name || 'User'}</span>
             <button 

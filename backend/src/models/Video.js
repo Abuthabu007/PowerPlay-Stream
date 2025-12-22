@@ -173,6 +173,16 @@ const Video = {
       viewCount: db.FieldValue.increment(1),
       updatedAt: new Date()
     });
+  },
+
+  /**
+   * Permanently delete video (destroy)
+   */
+  async destroy(options) {
+    const videoId = options.where.id;
+    const docRef = db.collection(videoCollection).doc(videoId);
+    await docRef.delete();
+    return { success: true };
   }
 };
 
