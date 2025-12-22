@@ -106,12 +106,13 @@
 
 .tag-badge {
   display: inline-block;
-  background-color: rgba(59, 130, 246, 0.1);
-  color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+  color: #DC2626;
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid #DC2626;
+  font-weight: 500;
 }
 
 .captions-available {
@@ -128,12 +129,14 @@
 
 .caption-badge {
   display: inline-block;
-  background-color: rgba(99, 102, 241, 0.1);
-  color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+  color: #DC2626;
   padding: 4px 8px;
   border-radius: 4px;
   margin-right: 6px;
   font-size: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  font-weight: 500;
 }
 
 .player-actions {

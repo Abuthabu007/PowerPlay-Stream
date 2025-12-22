@@ -247,7 +247,7 @@ const UploadDialog = ({ onClose, onSuccess }) => {
       uploadFormData.append('title', formData.title);
       uploadFormData.append('description', formData.description);
       uploadFormData.append('tags', formData.tags);
-      uploadFormData.append('isPublic', formData.isPublic);
+      uploadFormData.append('isPublic', formData.isPublic.toString()); // Convert boolean to string
       uploadFormData.append('video', videoFile);
       
       if (thumbnail) {
@@ -256,6 +256,15 @@ const UploadDialog = ({ onClose, onSuccess }) => {
 
       // Get token from localStorage
       const token = localStorage.getItem('iapToken');
+      
+      console.log('[UPLOAD] Submitting form data...');
+      console.log('[UPLOAD] Title:', formData.title);
+      console.log('[UPLOAD] Description:', formData.description);
+      console.log('[UPLOAD] Tags:', formData.tags);
+      console.log('[UPLOAD] IsPublic:', formData.isPublic);
+      console.log('[UPLOAD] Video file:', videoFile.name);
+      console.log('[UPLOAD] Thumbnail:', thumbnail ? thumbnail.name : 'none');
+      console.log('[UPLOAD] Token:', token ? 'Present' : 'Missing');
       
       // Submit form data with proper CORS headers
       const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
@@ -268,7 +277,9 @@ const UploadDialog = ({ onClose, onSuccess }) => {
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[UPLOAD] Server returned error:', response.status, errorData);
+        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
       }
 
       const result = await response.json();

@@ -28,6 +28,14 @@ class SecurityService {
       'video/webm',
       'video/ogg'
     ];
+
+    // Image file types for thumbnails
+    this.allowedImageMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp'
+    ];
     
     // Maximum file size (500MB)
     this.maxVideoSize = 500 * 1024 * 1024;
@@ -172,7 +180,7 @@ class SecurityService {
   }
 
   /**
-   * Validate MIME type
+   * Validate MIME type - accepts both video and image formats
    */
   validateMimeType(mimeType) {
     if (!mimeType) {
@@ -182,10 +190,11 @@ class SecurityService {
       };
     }
 
-    if (!this.allowedVideoMimes.includes(mimeType)) {
+    const allowedTypes = [...this.allowedVideoMimes, ...this.allowedImageMimes];
+    if (!allowedTypes.includes(mimeType)) {
       return {
         valid: false,
-        error: `Invalid file type: ${mimeType}. Allowed types: ${this.allowedVideoMimes.join(', ')}`
+        error: `Invalid file type: ${mimeType}. Allowed types: ${allowedTypes.join(', ')}`
       };
     }
 

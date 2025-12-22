@@ -41,7 +41,8 @@
 }
 
 .search-button:hover {
-  background-color: #4f46e5;
+  background-color: #B91C1C;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
 .suggestions-dropdown {
@@ -70,7 +71,7 @@
 }
 
 .suggestion-item:hover {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(220, 38, 38, 0.08);
 }
 
 .suggestion-title {

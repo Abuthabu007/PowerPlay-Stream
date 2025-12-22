@@ -7,12 +7,13 @@
 }
 
 .app-header {
-  background-color: var(--surface-color);
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(90deg, #DC2626 0%, #EF4444 100%);
+  border-bottom: none;
   padding: 20px 0;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
 }
 
 .header-content {
@@ -27,6 +28,8 @@
 .app-header h1 {
   font-size: 24px;
   margin: 0;
+  color: #FFFFFF;
+  font-weight: 700;
 }
 
 .header-actions {
@@ -37,7 +40,8 @@
 
 .user-info {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
 /* Main Content */
@@ -74,8 +78,9 @@
 }
 
 .tab.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+  color: #DC2626;
+  border-bottom-color: #DC2626;
+  font-weight: 600;
 }
 
 /* Videos Grid */

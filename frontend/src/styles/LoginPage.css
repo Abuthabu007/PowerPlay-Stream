@@ -4,7 +4,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #DC2626 0%, #EF4444 50%, #FFFFFF 100%);
   padding: 20px;
 }
 
@@ -17,8 +17,9 @@
   background-color: var(--surface-color);
   border-radius: 12px;
   padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(220, 38, 38, 0.15);
   text-align: center;
+  border: 2px solid #DC2626;
 }
 
 .login-card h1 {

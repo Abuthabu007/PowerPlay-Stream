@@ -21,8 +21,13 @@ class VideoController {
       console.log('[UPLOAD] Starting video upload');
       console.log('[UPLOAD] User ID:', userId);
       console.log('[UPLOAD] Title:', title);
+      console.log('[UPLOAD] Description:', description);
+      console.log('[UPLOAD] Tags:', tags);
+      console.log('[UPLOAD] IsPublic:', isPublic, '(type:', typeof isPublic, ')');
       console.log('[UPLOAD] Video file:', videoFile ? { name: videoFile.originalname, size: videoFile.size } : 'none');
       console.log('[UPLOAD] Thumbnail file:', thumbnailFile ? { name: thumbnailFile.originalname, size: thumbnailFile.size } : 'none');
+      console.log('[UPLOAD] Request body keys:', Object.keys(req.body));
+      console.log('[UPLOAD] Request files keys:', Object.keys(req.files || {}));
 
       if (!videoFile) {
         return res.status(400).json({

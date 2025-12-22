@@ -6,16 +6,16 @@
 }
 
 :root {
-  --primary-color: #6366f1;
-  --secondary-color: #ec4899;
+  --primary-color: #DC2626;
+  --secondary-color: #EF4444;
   --success-color: #10b981;
-  --danger-color: #ef4444;
+  --danger-color: #B91C1C;
   --warning-color: #f59e0b;
-  --background-color: #0f172a;
-  --surface-color: #1e293b;
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --border-color: #334155;
+  --background-color: #FAFAFA;
+  --surface-color: #FFFFFF;
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --border-color: #E5E7EB;
 }
 
 body {
@@ -70,8 +70,9 @@ code {
 }
 
 .btn-primary:hover {
-  background-color: #4f46e5;
+  background-color: #B91C1C;
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
 }
 
 .btn-primary:disabled {

@@ -10,9 +10,9 @@
   height: 100%;
 
 .video-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--primary-color);
-  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
+  transform: translateY(-8px);
+  border-color: #DC2626;
+  box-shadow: 0 15px 40px rgba(220, 38, 38, 0.15);
 }
 
 .video-thumbnail {
@@ -44,7 +44,7 @@
   transform: translate(-50%, -50%);
   width: 50px;
   height: 50px;
-  background-color: rgba(99, 102, 241, 0.9);
+  background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
   border: none;
   border-radius: 50%;
   color: white;
@@ -52,14 +52,16 @@
   cursor: pointer;
   transition: all 0.3s ease;
   opacity: 0;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
 }
 
 .video-card:hover .play-button {
   opacity: 1;
 }
 
-.play-button:hover {
-  background-color: var(--primary-color);
+.play-button: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4
   transform: translate(-50%, -50%) scale(1.1);
 }
 
@@ -123,11 +125,13 @@
   margin-bottom: 12px;
 }
 
-.tag {
-  background-color: rgba(99, 102, 241, 0.1);
-  color: var(--primary-color);
+.tag {: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+  color: #DC2626;
   padding: 4px 8px;
   border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  font-weight: 5004px;
   font-size: 11px;
 }
 
@@ -143,9 +147,10 @@
   min-width: 70px;
   padding: 8px 10px;
   font-size: 11px;
-}
-
-.btn-action.btn-play {
+}: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+  color: white;
+  border: none;
+  font-weight: 600n-play {
   background-color: var(--primary-color);
   color: white;
   border: none;
