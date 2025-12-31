@@ -68,8 +68,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
-
-// Health check - simple and fast
+// Health check - simple and fast (public endpoint)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -88,20 +87,46 @@ app.get('/', (req, res) => {
 });
 
 
-// Get IAP user info (to be refactored for Firestore-based user info)
+// Get IAP user info - protected endpoint
 app.get('/api/user-info', iapAuth, (req, res) => {
   try {
     if (req.user) {
       res.json({
-        email: req.user.email,
-        name: req.user.name,
-        iapId: req.user.iapId
+        success: true,
+        data: {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          iapId: req.user.iapId,
+          role: req.user.role
+        }
       });
     } else {
-      res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ success: false, error: 'User not authenticated' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get Current User Info (alias endpoint)
+app.get('/api/users/me/info', iapAuth, (req, res) => {
+  try {
+    if (req.user) {
+      res.json({
+        success: true,
+        data: {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          role: req.user.role
+        }
+      });
+    } else {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
