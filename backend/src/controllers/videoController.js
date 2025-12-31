@@ -137,7 +137,8 @@ class VideoController {
       }
 
       // Generate embedded link
-      const embeddedLink = `https://yourapp.com/embed/${videoId}`;
+      const appUrl = process.env.APP_URL || 'http://localhost:3000';
+      const embeddedLink = `${appUrl}/embed/${videoId}`;
 
       // Create video record in database
       const video = await videoService.createVideo({
@@ -867,7 +868,7 @@ class VideoController {
               cloudStoragePath: videoUpload.path,
               folderPath,
               isPublic: isPublic === 'true',
-              embeddedLink: `https://yourapp.com/embed/${videoId}`,
+              embeddedLink: `${process.env.APP_URL || 'http://localhost:3000'}/embed/${videoId}`,
               transcodingStatus: 'pending'
             });
 
