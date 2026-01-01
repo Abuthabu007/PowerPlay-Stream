@@ -68,6 +68,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
+// Serve frontend static files (CSS, JS, images)
+app.use(express.static(path.join(__dirname, '../../frontend/build')));
+
 // Health check - simple and fast (public endpoint)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -138,6 +141,12 @@ app.use('/api', (req, res) => {
     path: req.path,
     method: req.method
   });
+});
+
+// Fallback to index.html for React client-side routing
+// This must come AFTER API routes to avoid catching /api calls
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../frontend/build/index.html'));
 });
 
 // Error handler
