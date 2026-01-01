@@ -1,4 +1,4 @@
-const searchService = require('../services/vertexAiService');
+const searchService = require('../services/searchService');
 
 class SearchController {
   /**
