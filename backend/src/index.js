@@ -81,17 +81,12 @@ app.get('/api/health', (req, res) => {
 // Serve frontend static files (CSS, JS, images)
 app.use(express.static(path.join(__dirname, '../../frontend/build')));
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    service: 'PowerPlay Stream Backend API',
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      health: 'GET /health',
-      videos: 'GET /api/videos/*'
-    }
-  });
+// SPA fallback: serve index.html for all non-API routes
+app.get('/*', (req, res) => {
+  // Don't serve index.html for API calls (they should 404)
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../../frontend/build/index.html'));
+  }
 });
 
 

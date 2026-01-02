@@ -3,14 +3,18 @@ import axios from 'axios';
 // Determine API URL based on environment
 let API_BASE_URL;
 
-if (window.location.hostname === 'localhost') {
+// For monolithic deployment, use relative API path (same domain)
+// For development with separate backend, use localhost:5000
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Development mode: separate backend on localhost:5000
   API_BASE_URL = 'http://localhost:5000/api';
 } else {
-  // Production: always use the hardcoded backend URL
-  API_BASE_URL = 'https://looply-backend-687745071178.us-central1.run.app/api';
+  // Monolithic/Production mode: API on same domain
+  // This works because backend serves frontend + API from same port
+  API_BASE_URL = '/api';
 }
 
-console.log('API_BASE_URL:', API_BASE_URL);
+console.log('API_BASE_URL:', API_BASE_URL, '(hostname:', window.location.hostname, ')');
 
 // Get IAP token from Authorization header
 const getAuthToken = () => {
