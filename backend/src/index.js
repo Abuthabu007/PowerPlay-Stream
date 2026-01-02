@@ -61,6 +61,10 @@ app.use(cors(corsOptions));
 // Explicitly handle preflight requests
 app.options('*', cors(corsOptions));
 
+// IAP Authentication Middleware - applies to all routes
+// This extracts user info from IAP-injected Authorization header
+app.use(iapAuth);
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -90,8 +94,9 @@ app.get('/*', (req, res) => {
 });
 
 
-// Get IAP user info - protected endpoint
-app.get('/api/user-info', iapAuth, (req, res) => {
+// Get IAP user info - PUBLIC endpoint (no auth required)
+// When IAP is enabled, the Authorization header is injected by GCP
+app.get('/api/user-info', (req, res) => {
   try {
     if (req.user) {
       res.json({
@@ -104,6 +109,17 @@ app.get('/api/user-info', iapAuth, (req, res) => {
           role: req.user.role
         }
       });
+    } else if (process.env.DISABLE_IAP_VALIDATION === 'true') {
+      res.json({
+        success: true,
+        data: {
+          id: 'dev-user-123',
+          email: 'dev@example.com',
+          name: 'Development User',
+          iapId: 'dev-user',
+          role: 'superadmin'
+        }
+      });
     } else {
       res.status(401).json({ success: false, error: 'User not authenticated' });
     }
@@ -113,7 +129,7 @@ app.get('/api/user-info', iapAuth, (req, res) => {
 });
 
 // Get Current User Info (alias endpoint)
-app.get('/api/users/me/info', iapAuth, (req, res) => {
+app.get('/api/users/me/info', (req, res) => {
   try {
     if (req.user) {
       res.json({
@@ -123,6 +139,16 @@ app.get('/api/users/me/info', iapAuth, (req, res) => {
           email: req.user.email,
           name: req.user.name,
           role: req.user.role
+        }
+      });
+    } else if (process.env.DISABLE_IAP_VALIDATION === 'true') {
+      res.json({
+        success: true,
+        data: {
+          id: 'dev-user-123',
+          email: 'dev@example.com',
+          name: 'Development User',
+          role: 'superadmin'
         }
       });
     } else {
