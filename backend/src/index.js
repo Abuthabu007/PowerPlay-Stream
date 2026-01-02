@@ -68,13 +68,18 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
-// Serve frontend static files (CSS, JS, images)
-app.use(express.static(path.join(__dirname, '../../frontend/build')));
-
 // Health check - simple and fast (public endpoint)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Health check under /api path (for frontend compatibility)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Serve frontend static files (CSS, JS, images)
+app.use(express.static(path.join(__dirname, '../../frontend/build')));
 
 // Root endpoint
 app.get('/', (req, res) => {
