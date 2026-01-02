@@ -143,12 +143,6 @@ app.use('/api', (req, res) => {
   });
 });
 
-// Fallback to index.html for React client-side routing
-// This must come AFTER API routes to avoid catching /api calls
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frontend/build/index.html'));
-});
-
 // Error handler
 app.use(errorHandler);
 
