@@ -95,13 +95,30 @@ const iapAuth = async (req, res, next) => {
 
     console.log(`[AUTH] IAP validation enabled`);
     console.log(`[AUTH] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+    console.log(`[AUTH] Request path: ${req.path}`);
 
     // Get IAP JWT token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      // If no Authorization header, check if this is direct Cloud Run access (for development)
+      // This allows Cloud Run to be accessed directly without IAP for testing
+      if (process.env.ALLOW_DIRECT_CLOUD_RUN_ACCESS === 'true') {
+        console.warn('[WARNING] Direct Cloud Run access detected - using dev user. Configure Load Balancer + IAP for production.');
+        req.user = {
+          id: 'dev-user-123',
+          email: 'dev@example.com',
+          name: 'Development User',
+          iapId: 'dev-user',
+          role: 'superadmin'
+        };
+        return next();
+      }
+
+      console.warn('[AUTH] No Authorization header found. Ensure request is coming through Load Balancer with IAP enabled.');
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: Missing Authorization header. Is IAP enabled in GCP Console?'
+        message: 'Unauthorized: Missing Authorization header. Is IAP enabled in Load Balancer?',
+        hint: 'Set ALLOW_DIRECT_CLOUD_RUN_ACCESS=true to bypass for testing'
       });
     }
 
