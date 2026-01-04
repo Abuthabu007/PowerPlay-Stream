@@ -5,7 +5,9 @@ const { iapAuth } = require('../middleware/auth');
 
 /**
  * PROTECTED ROUTES - IAP authentication required
+ * CORS preflight (OPTIONS) is handled globally in index.js
  */
+
 router.use(iapAuth);
 
 /**

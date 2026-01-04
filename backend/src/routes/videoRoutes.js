@@ -26,12 +26,24 @@ router.get('/search/query', videoController.search);
 /**
  * PROTECTED ROUTES (auth required)
  * Apply auth middleware to all routes below
+ * CORS preflight (OPTIONS) is handled globally in index.js
  */
+
 router.use(iapAuth);
 
 // Video Upload
 router.post('/upload',
+  (req, res, next) => {
+    console.log(`[VIDEO-UPLOAD] Multer starting - headers:`, Object.keys(req.headers));
+    next();
+  },
   upload.fields([{ name: 'video', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]),
+  (req, res, next) => {
+    console.log(`[VIDEO-UPLOAD] Multer completed`);
+    console.log(`[VIDEO-UPLOAD] Files received:`, Object.keys(req.files || {}));
+    console.log(`[VIDEO-UPLOAD] Body:`, Object.keys(req.body || {}));
+    next();
+  },
   videoController.uploadVideo
 );
 

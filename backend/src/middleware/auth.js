@@ -66,10 +66,9 @@ async function verifyIAPToken(token, expectedAudience) {
 }
 
 /**
- * IAP Authentication Middleware
- * Verifies Google Identity-Aware Proxy JWT token
- * Validates user email against allowed user list
- * Automatically assigns roles based on email configuration
+ * IAP Authentication Middleware - SIMPLIFIED FOR GCP IAP
+ * When IAP is enabled in GCP, it automatically validates the JWT before it reaches your app
+ * We just need to extract user info from the JWT payload
  */
 const iapAuth = async (req, res, next) => {
   try {
@@ -80,9 +79,6 @@ const iapAuth = async (req, res, next) => {
 
     // Allow bypassing IAP validation for local development
     if (process.env.DISABLE_IAP_VALIDATION === 'true') {
-      console.warn('[WARNING] IAP validation is disabled. This should only be used in development.');
-      
-      // Dev user mock (no DB) - with consistent userId for development
       req.user = {
         id: 'dev-user-123',
         email: 'dev@example.com',
@@ -93,32 +89,12 @@ const iapAuth = async (req, res, next) => {
       return next();
     }
 
-    console.log(`[AUTH] IAP validation enabled`);
-    console.log(`[AUTH] Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`);
-    console.log(`[AUTH] Request path: ${req.path}`);
-
-    // Get IAP JWT token from Authorization header
     const authHeader = req.headers.authorization;
+    
     if (!authHeader) {
-      // If no Authorization header, check if this is direct Cloud Run access (for development)
-      // This allows Cloud Run to be accessed directly without IAP for testing
-      if (process.env.ALLOW_DIRECT_CLOUD_RUN_ACCESS === 'true') {
-        console.warn('[WARNING] Direct Cloud Run access detected - using dev user. Configure Load Balancer + IAP for production.');
-        req.user = {
-          id: 'dev-user-123',
-          email: 'dev@example.com',
-          name: 'Development User',
-          iapId: 'dev-user',
-          role: 'superadmin'
-        };
-        return next();
-      }
-
-      console.warn('[AUTH] No Authorization header found. Ensure request is coming through Load Balancer with IAP enabled.');
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized: Missing Authorization header. Is IAP enabled in Load Balancer?',
-        hint: 'Set ALLOW_DIRECT_CLOUD_RUN_ACCESS=true to bypass for testing'
+        message: 'Unauthorized: Missing Authorization header'
       });
     }
 
@@ -132,51 +108,44 @@ const iapAuth = async (req, res, next) => {
 
     const iapJwt = parts[1];
 
-    // Get the expected audience (Cloud Run service URL or project ID)
-    const expectedAudience = process.env.IAP_AUDIENCE || `/projects/${process.env.GCP_PROJECT_ID}/global/backendServices/YOUR_SERVICE_ID`;
+    // Decode JWT (GCP IAP has already validated it)
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.decode(iapJwt, { complete: true });
     
-    // Verify the JWT token
-    let decoded;
-    try {
-      decoded = await verifyIAPToken(iapJwt, expectedAudience);
-    } catch (verifyError) {
-      // If verification fails with audience, try without strict audience check
-      // This happens when IAP_AUDIENCE not perfectly configured
-      console.warn('[AUTH] JWT verification failed, trying fallback...');
-      const decoded_fallback = jwt.decode(iapJwt, { complete: true });
-      if (!decoded_fallback) {
-        throw new Error('Could not decode JWT token');
-      }
-      decoded = decoded_fallback.payload;
+    if (!decoded || !decoded.payload) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized: Invalid JWT'
+      });
     }
 
-    const userEmail = decoded.email;
+    const payload = decoded.payload;
+    const userEmail = payload.email || payload.sub;
     
     // Check if user is in allowed list
     if (!isEmailAllowed(userEmail)) {
-      console.warn(`[AUTH] User not authorized: ${userEmail}`);
       return res.status(403).json({
         success: false,
-        message: `Unauthorized: ${userEmail} is not authorized to access this application`
+        message: `Unauthorized: ${userEmail} is not authorized`
       });
     }
 
     // Get role from email configuration
     const userRole = getRoleFromEmail(userEmail);
 
-    // Set user info from JWT (no DB)
+    // Set user info from JWT
     req.user = {
-      id: 'dev-user-123',
+      id: payload.sub || 'unknown',
       email: userEmail,
-      name: decoded.name || userEmail,
-      iapId: decoded.sub,
+      name: payload.name || userEmail,
+      iapId: payload.sub,
       role: userRole
     };
 
-    console.log(`[AUTH] User authenticated: ${userEmail} (${userRole})`);
+    console.log(`[AUTH] User: ${userEmail} (${userRole})`);
     next();
   } catch (error) {
-    console.error('[AUTH] Authentication error:', error.message);
+    console.error('[AUTH] Error:', error.message);
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: ' + error.message

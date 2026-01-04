@@ -58,17 +58,32 @@ app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 app.use(cors(corsOptions));
 
-// Explicitly handle preflight requests
+// Explicitly handle all preflight requests BEFORE any routes
 app.options('*', cors(corsOptions));
 
-// IAP Authentication Middleware - applies to all routes
-// This extracts user info from IAP-injected Authorization header
-app.use(iapAuth);
+// Disable caching for API responses
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
 
-// Serve uploaded files
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.path}`);
+  next();
+});
+
+// Serve uploaded files (no auth required)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// API Routes
+// Serve frontend static files (CSS, JS, images) - no auth required
+app.use(express.static(path.join(__dirname, '../../frontend/build')));
+
+// API Routes (auth middleware applied at route level for public routes)
 app.use('/api/videos', videoRoutes);
 app.use('/api/search', searchRoutes);
 
@@ -94,37 +109,70 @@ app.get('/*', (req, res) => {
 });
 
 
-// Get IAP user info - PUBLIC endpoint (no auth required)
-// When IAP is enabled, the Authorization header is injected by GCP
-app.get('/api/user-info', (req, res) => {
+// Get IAP user info - endpoint that works with IAP authentication
+// When IAP is enabled, the Authorization header is injected by GCP with a valid JWT
+app.get('/api/user-info', async (req, res) => {
+  const startTime = Date.now();
+  
   try {
-    if (req.user) {
-      res.json({
-        success: true,
-        data: {
-          id: req.user.id,
-          email: req.user.email,
-          name: req.user.name,
-          iapId: req.user.iapId,
-          role: req.user.role
-        }
-      });
-    } else if (process.env.DISABLE_IAP_VALIDATION === 'true') {
-      res.json({
-        success: true,
-        data: {
-          id: 'dev-user-123',
-          email: 'dev@example.com',
-          name: 'Development User',
-          iapId: 'dev-user',
-          role: 'superadmin'
-        }
-      });
-    } else {
-      res.status(401).json({ success: false, error: 'User not authenticated' });
+    console.log('[USER-INFO] Request started');
+    
+    const authHeader = req.headers.authorization;
+    
+    // If no Authorization header, return null user quickly
+    if (!authHeader) {
+      console.log('[USER-INFO] No auth header - returning null');
+      res.set('Content-Type', 'application/json');
+      return res.json(null);
     }
+
+    console.log('[USER-INFO] Auth header present, parsing...');
+    const parts = authHeader.split(' ');
+    
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      console.log('[USER-INFO] Invalid auth format - returning null');
+      res.set('Content-Type', 'application/json');
+      return res.json(null);
+    }
+
+    const iapJwt = parts[1];
+    console.log('[USER-INFO] JWT token length:', iapJwt.length);
+
+    // Decode JWT quickly (don't verify - GCP IAP already verified it)
+    const jwt = require('jsonwebtoken');
+    let decoded;
+    
+    try {
+      decoded = jwt.decode(iapJwt, { complete: true });
+    } catch (decodeErr) {
+      console.warn('[USER-INFO] JWT decode error:', decodeErr.message);
+      res.set('Content-Type', 'application/json');
+      return res.json(null);
+    }
+    
+    if (!decoded || !decoded.payload) {
+      console.log('[USER-INFO] No payload in JWT - returning null');
+      res.set('Content-Type', 'application/json');
+      return res.json(null);
+    }
+
+    const payload = decoded.payload;
+    console.log('[USER-INFO] JWT payload extracted in', Date.now() - startTime, 'ms');
+    
+    const userData = {
+      id: payload.sub || 'unknown',
+      email: payload.email || 'unknown@example.com',
+      name: payload.name || payload.email || 'Unknown User',
+      iapId: payload.sub,
+      role: 'user'
+    };
+    
+    console.log('[USER-INFO] Returning user data in', Date.now() - startTime, 'ms:', userData.email);
+    res.set('Content-Type', 'application/json');
+    res.json(userData);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('[USER-INFO] Error in', Date.now() - startTime, 'ms:', error.message);
+    res.status(500).set('Content-Type', 'application/json').json(null);
   }
 });
 
