@@ -138,36 +138,51 @@ app.get('/api/user-info', async (req, res) => {
     const iapJwt = parts[1];
     console.log('[USER-INFO] JWT token length:', iapJwt.length);
 
-    // Decode JWT quickly (don't verify - GCP IAP already verified it)
+    // Decode JWT or base64 token
     const jwt = require('jsonwebtoken');
-    let decoded;
-    
+    let payload = null;
+
+    // Try to decode as JWT first (for real IAP tokens)
     try {
-      decoded = jwt.decode(iapJwt, { complete: true });
-    } catch (decodeErr) {
-      console.warn('[USER-INFO] JWT decode error:', decodeErr.message);
-      res.set('Content-Type', 'application/json');
-      return res.json(null);
+      const decoded = jwt.decode(iapJwt, { complete: true });
+      if (decoded && decoded.payload) {
+        payload = decoded.payload;
+        console.log('[USER-INFO] Decoded JWT successfully');
+      }
+    } catch (jwtErr) {
+      console.warn('[USER-INFO] Failed to decode as JWT:', jwtErr.message);
     }
-    
-    if (!decoded || !decoded.payload) {
-      console.log('[USER-INFO] No payload in JWT - returning null');
+
+    // Fallback: Try to decode as base64 (for development mock tokens)
+    if (!payload) {
+      try {
+        const decoded = Buffer.from(iapJwt, 'base64').toString('utf-8');
+        payload = JSON.parse(decoded);
+        console.log('[USER-INFO] Decoded base64 mock token successfully');
+      } catch (b64Err) {
+        console.error('[USER-INFO] Failed to decode token:', b64Err.message);
+        res.set('Content-Type', 'application/json');
+        return res.json(null);
+      }
+    }
+
+    if (!payload) {
+      console.log('[USER-INFO] No payload extracted - returning null');
       res.set('Content-Type', 'application/json');
       return res.json(null);
     }
 
-    const payload = decoded.payload;
-    console.log('[USER-INFO] JWT payload extracted in', Date.now() - startTime, 'ms');
+    console.log('[USER-INFO] Token payload extracted in', Date.now() - startTime, 'ms');
     
     const userData = {
       id: payload.sub || 'unknown',
       email: payload.email || 'unknown@example.com',
       name: payload.name || payload.email || 'Unknown User',
       iapId: payload.sub,
-      role: 'user'
+      role: payload.role || 'user'
     };
     
-    console.log('[USER-INFO] Returning user data in', Date.now() - startTime, 'ms:', userData.email);
+    console.log('[USER-INFO] Returning user data in', Date.now() - startTime, 'ms:', userData.email, '(' + userData.name + ')');
     res.set('Content-Type', 'application/json');
     res.json(userData);
   } catch (error) {

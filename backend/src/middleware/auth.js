@@ -108,18 +108,44 @@ const iapAuth = async (req, res, next) => {
 
     const iapJwt = parts[1];
 
-    // Decode JWT (GCP IAP has already validated it)
+    // Decode JWT
     const jwt = require('jsonwebtoken');
-    const decoded = jwt.decode(iapJwt, { complete: true });
-    
-    if (!decoded || !decoded.payload) {
+    let payload = null;
+
+    // Try to decode as JWT first (for real IAP tokens)
+    try {
+      const decoded = jwt.decode(iapJwt, { complete: true });
+      
+      if (decoded && decoded.payload) {
+        payload = decoded.payload;
+        console.log('[AUTH] Decoded JWT successfully');
+      }
+    } catch (jwtErr) {
+      console.warn('[AUTH] Failed to decode as JWT:', jwtErr.message);
+    }
+
+    // Fallback: Try to decode as base64 (for development mock tokens)
+    if (!payload) {
+      try {
+        const decoded = Buffer.from(iapJwt, 'base64').toString('utf-8');
+        payload = JSON.parse(decoded);
+        console.log('[AUTH] Decoded base64 mock token successfully');
+      } catch (b64Err) {
+        console.error('[AUTH] Failed to decode token:', b64Err.message);
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized: Invalid token format'
+        });
+      }
+    }
+
+    if (!payload) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: Invalid JWT'
       });
     }
 
-    const payload = decoded.payload;
     const userEmail = payload.email || payload.sub;
     
     // Check if user is in allowed list
