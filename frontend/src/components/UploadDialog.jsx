@@ -1,11 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { videoAPI } from '../services/api';
 import '../styles/UploadDialog.css';
-
-// Backend API URL
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://looply-backend-687745071178.us-central1.run.app';
 
 /**
  * Capture thumbnail from video at specified time (in seconds)
@@ -254,9 +250,6 @@ const UploadDialog = ({ onClose, onSuccess }) => {
         uploadFormData.append('thumbnail', thumbnail);
       }
 
-      // Get token from localStorage
-      const token = localStorage.getItem('iapToken');
-      
       console.log('[UPLOAD] Submitting form data...');
       console.log('[UPLOAD] Title:', formData.title);
       console.log('[UPLOAD] Description:', formData.description);
@@ -264,25 +257,10 @@ const UploadDialog = ({ onClose, onSuccess }) => {
       console.log('[UPLOAD] IsPublic:', formData.isPublic);
       console.log('[UPLOAD] Video file:', videoFile.name);
       console.log('[UPLOAD] Thumbnail:', thumbnail ? thumbnail.name : 'none');
-      console.log('[UPLOAD] Token:', token ? 'Present' : 'Missing');
       
-      // Submit form data with proper CORS headers
-      const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
-        method: 'POST',
-        body: uploadFormData,
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        credentials: 'omit' // Don't send cookies, we're using Authorization header
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('[UPLOAD] Server returned error:', response.status, errorData);
-        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
+      // Use videoAPI which handles auth and CORS properly
+      const result = await videoAPI.uploadVideo(uploadFormData);
+      console.log('[UPLOAD] Upload successful:', result.data);
       onSuccess(result.data);
       onClose();
     } catch (err) {
