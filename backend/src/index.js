@@ -145,9 +145,16 @@ app.get('/api/user-info', async (req, res) => {
     // Try to decode as JWT first (for real IAP tokens)
     try {
       const decoded = jwt.decode(iapJwt, { complete: true });
-      if (decoded && decoded.payload) {
-        payload = decoded.payload;
-        console.log('[USER-INFO] Decoded JWT successfully');
+      console.log('[USER-INFO] JWT decode result:', decoded ? 'got decoded object' : 'null');
+      
+      if (decoded) {
+        // Handle different jwt.decode response formats
+        payload = decoded.payload || decoded;
+        console.log('[USER-INFO] Extracted payload, has email:', !!payload.email, 'has name:', !!payload.name);
+      }
+      
+      if (payload) {
+        console.log('[USER-INFO] Successfully decoded JWT');
       }
     } catch (jwtErr) {
       console.warn('[USER-INFO] Failed to decode as JWT:', jwtErr.message);
@@ -156,11 +163,12 @@ app.get('/api/user-info', async (req, res) => {
     // Fallback: Try to decode as base64 (for development mock tokens)
     if (!payload) {
       try {
+        console.log('[USER-INFO] Trying base64 decode as fallback');
         const decoded = Buffer.from(iapJwt, 'base64').toString('utf-8');
         payload = JSON.parse(decoded);
-        console.log('[USER-INFO] Decoded base64 mock token successfully');
+        console.log('[USER-INFO] Successfully decoded as base64 mock token');
       } catch (b64Err) {
-        console.error('[USER-INFO] Failed to decode token:', b64Err.message);
+        console.error('[USER-INFO] Failed to decode token as base64:', b64Err.message);
         res.set('Content-Type', 'application/json');
         return res.json(null);
       }
@@ -175,10 +183,10 @@ app.get('/api/user-info', async (req, res) => {
     console.log('[USER-INFO] Token payload extracted in', Date.now() - startTime, 'ms');
     
     const userData = {
-      id: payload.sub || 'unknown',
+      id: payload.sub || payload.user_id || 'unknown',
       email: payload.email || 'unknown@example.com',
       name: payload.name || payload.email || 'Unknown User',
-      iapId: payload.sub,
+      iapId: payload.sub || payload.user_id,
       role: payload.role || 'user'
     };
     
@@ -186,7 +194,8 @@ app.get('/api/user-info', async (req, res) => {
     res.set('Content-Type', 'application/json');
     res.json(userData);
   } catch (error) {
-    console.error('[USER-INFO] Error in', Date.now() - startTime, 'ms:', error.message);
+    console.error('[USER-INFO] Unexpected error in', Date.now() - startTime, 'ms:', error.message);
+    console.error('[USER-INFO] Stack:', error.stack);
     res.status(500).set('Content-Type', 'application/json').json(null);
   }
 });

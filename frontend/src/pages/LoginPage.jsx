@@ -137,11 +137,22 @@ const LoginPage = ({ onLoginSuccess }) => {
       let userData = null;
       try {
         console.log('[LOGIN] Fetching user info from backend...');
+        
+        // Add a timeout for user-info request (don't wait forever)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('[LOGIN] User info request timeout - using token data');
+          controller.abort();
+        }, 3000); // 3 second timeout
+        
         const userInfoResponse = await fetch('/api/user-info', {
           headers: {
             'Authorization': `Bearer ${token}`
-          }
+          },
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         if (userInfoResponse.ok) {
           userData = await userInfoResponse.json();

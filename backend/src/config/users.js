@@ -11,7 +11,9 @@ const USER_ROLES = {
     'muskansharma2598@gmail.com'  // Can manage users
   ],
   user: [
-    'amrithachand@gmail.com'      // Regular user
+    'admin@looply.co.in',           //Admin user
+    'amrithachand@gmail.com',      // Regular user
+    'test@example.com'             // Test user
   ]
 };
 
