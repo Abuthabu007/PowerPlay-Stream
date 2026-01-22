@@ -182,9 +182,18 @@ app.get('/api/user-info', async (req, res) => {
 
     console.log('[USER-INFO] Token payload extracted in', Date.now() - startTime, 'ms');
     
+    // Extract username - prioritize: given_name > name > email prefix
+    let username = (payload.email || 'user').split('@')[0];
+    if (payload.given_name) {
+      username = payload.given_name;
+    } else if (payload.name) {
+      username = payload.name.split(' ')[0];
+    }
+    
     const userData = {
       id: payload.sub || payload.user_id || 'unknown',
       email: payload.email || 'unknown@example.com',
+      username: username, // NEW: username field
       name: payload.name || payload.email || 'Unknown User',
       iapId: payload.sub || payload.user_id,
       role: payload.role || 'user'
@@ -209,6 +218,7 @@ app.get('/api/users/me/info', (req, res) => {
         data: {
           id: req.user.id,
           email: req.user.email,
+          username: req.user.username, // NEW: username field
           name: req.user.name,
           role: req.user.role
         }
@@ -219,6 +229,7 @@ app.get('/api/users/me/info', (req, res) => {
         data: {
           id: 'dev-user-123',
           email: 'dev@example.com',
+          username: 'devuser', // NEW: username field
           name: 'Development User',
           role: 'superadmin'
         }

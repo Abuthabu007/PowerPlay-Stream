@@ -82,6 +82,7 @@ const iapAuth = async (req, res, next) => {
       req.user = {
         id: 'dev-user-123',
         email: 'dev@example.com',
+        username: 'devuser', // NEW: username field
         name: 'Development User',
         iapId: 'dev-user',
         role: 'superadmin'
@@ -159,16 +160,25 @@ const iapAuth = async (req, res, next) => {
     // Get role from email configuration
     const userRole = getRoleFromEmail(userEmail);
 
+    // Extract username - prioritize: given_name > name > email prefix
+    let username = userEmail.split('@')[0]; // Default: email prefix (test@example.com → "test")
+    if (payload.given_name) {
+      username = payload.given_name; // Google provides "given_name"
+    } else if (payload.name) {
+      username = payload.name.split(' ')[0]; // Use first name from full name
+    }
+
     // Set user info from JWT
     req.user = {
       id: payload.sub || 'unknown',
       email: userEmail,
-      name: payload.name || userEmail,
+      username: username, // NEW: username instead of/in addition to email
+      name: payload.name || payload.given_name || username,
       iapId: payload.sub,
       role: userRole
     };
 
-    console.log(`[AUTH] User: ${userEmail} (${userRole})`);
+    console.log(`[AUTH] User: ${username} (${userEmail}) - ${userRole}`);
     next();
   } catch (error) {
     console.error('[AUTH] Error:', error.message);
