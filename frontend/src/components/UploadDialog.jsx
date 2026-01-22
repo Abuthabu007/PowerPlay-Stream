@@ -103,10 +103,57 @@ const UploadDialog = ({ onClose, onSuccess }) => {
     { code: 'fr', label: 'French' }
   ];
 
+  /**
+   * Validate video file before upload
+   */
+  const validateVideoFile = (file) => {
+    const errors = [];
+    
+    // Check file size (500MB max)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      errors.push(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum of 500MB`);
+    }
+    
+    // Check file type
+    const validVideoTypes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv', 'video/x-matroska', 'video/webm', 'video/ogg'];
+    if (!validVideoTypes.includes(file.type)) {
+      errors.push(`Invalid video format. Allowed: MP4, AVI, MOV, MKV, FLV, WebM, OGG`);
+    }
+    
+    // Check file extension
+    const validExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.webm', '.ogv', '.m4v', '.mpeg', '.mpg'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    if (!hasValidExtension) {
+      errors.push(`Invalid file extension. Allowed: ${validExtensions.join(', ')}`);
+    }
+    
+    // Check for suspicious file names (no executables disguised as videos)
+    const suspiciousPatterns = ['.exe', '.bat', '.cmd', '.sh', '.zip', '.rar', '.dll'];
+    if (suspiciousPatterns.some(pattern => fileName.includes(pattern))) {
+      errors.push('Suspicious file name detected');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
   // Video upload - with automatic thumbnail capture
   const onVideoDrop = useCallback(acceptedFiles => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
+      
+      // Validate file before accepting
+      const validation = validateVideoFile(file);
+      if (!validation.valid) {
+        setError(validation.errors.join('\n'));
+        console.error('[UPLOAD] File validation failed:', validation.errors);
+        return;
+      }
+      
       setVideoFile(file);
       setError('');
       setShowVideoScrubber(true); // Show scrubber when video is selected
@@ -178,10 +225,51 @@ const UploadDialog = ({ onClose, onSuccess }) => {
     }
   };
 
+  /**
+   * Validate thumbnail image file before upload
+   */
+  const validateThumbnailFile = (file) => {
+    const errors = [];
+    
+    // Check file size (10MB max for thumbnails)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      errors.push(`Thumbnail size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum of 10MB`);
+    }
+    
+    // Check file type
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      errors.push(`Invalid image format. Allowed: JPG, PNG, WebP`);
+    }
+    
+    // Check file extension
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    if (!hasValidExtension) {
+      errors.push(`Invalid file extension. Allowed: ${validExtensions.join(', ')}`);
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
   // Thumbnail upload (manual override)
   const onThumbnailDrop = useCallback(acceptedFiles => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
+      
+      // Validate file before accepting
+      const validation = validateThumbnailFile(file);
+      if (!validation.valid) {
+        setError(validation.errors.join('\n'));
+        console.error('[UPLOAD] Thumbnail validation failed:', validation.errors);
+        return;
+      }
+      
       setThumbnail(file);
       setThumbnailPreview(URL.createObjectURL(file));
       setError('');
@@ -190,9 +278,50 @@ const UploadDialog = ({ onClose, onSuccess }) => {
     }
   }, []);
 
+  /**
+   * Validate caption file before upload
+   */
+  const validateCaptionFile = (file) => {
+    const errors = [];
+    
+    // Check file size (5MB max for captions)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      errors.push(`Caption file size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum of 5MB`);
+    }
+    
+    // Check file type
+    const validCaptionTypes = ['text/plain', 'text/vtt', 'application/x-subrip', 'application/xml', 'text/xml'];
+    const fileName = file.name.toLowerCase();
+    const isValidType = validCaptionTypes.includes(file.type) || 
+                        fileName.endsWith('.vtt') || 
+                        fileName.endsWith('.srt') || 
+                        fileName.endsWith('.ass') ||
+                        fileName.endsWith('.ssa');
+    
+    if (!isValidType) {
+      errors.push(`Invalid caption format. Allowed: VTT, SRT, ASS, SSA`);
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
   // Caption upload
   const onCaptionDrop = useCallback((acceptedFiles, language) => {
     if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      
+      // Validate file before accepting
+      const validation = validateCaptionFile(file);
+      if (!validation.valid) {
+        setError(`Caption validation failed: ${validation.errors.join(', ')}`);
+        console.error('[UPLOAD] Caption validation failed:', validation.errors);
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         captions: [
@@ -236,6 +365,31 @@ const UploadDialog = ({ onClose, onSuccess }) => {
       return;
     }
 
+    // Final validation before upload
+    const fileValidation = validateVideoFile(videoFile);
+    if (!fileValidation.valid) {
+      setError(fileValidation.errors.join('\n'));
+      return;
+    }
+
+    // Validate thumbnail if provided
+    if (thumbnail) {
+      const thumbValidation = validateThumbnailFile(thumbnail);
+      if (!thumbValidation.valid) {
+        setError(`Thumbnail error: ${thumbValidation.errors.join(', ')}`);
+        return;
+      }
+    }
+
+    // Validate all captions
+    for (const caption of formData.captions) {
+      const captionValidation = validateCaptionFile(caption.file);
+      if (!captionValidation.valid) {
+        setError(`Caption error (${caption.language}): ${captionValidation.errors.join(', ')}`);
+        return;
+      }
+    }
+
     try {
       setUploading(true);
 
@@ -255,7 +409,7 @@ const UploadDialog = ({ onClose, onSuccess }) => {
       console.log('[UPLOAD] Description:', formData.description);
       console.log('[UPLOAD] Tags:', formData.tags);
       console.log('[UPLOAD] IsPublic:', formData.isPublic);
-      console.log('[UPLOAD] Video file:', videoFile.name);
+      console.log('[UPLOAD] Video file:', videoFile.name, `(${(videoFile.size / 1024 / 1024).toFixed(2)}MB)`);
       console.log('[UPLOAD] Thumbnail:', thumbnail ? thumbnail.name : 'none');
       
       // Use videoAPI which handles auth and CORS properly
